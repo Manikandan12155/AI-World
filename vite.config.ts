@@ -8,7 +8,8 @@ export default defineConfig({
     tailwindcss(),
     react()
   ],
-  base: process.env.NODE_ENV === 'production' ? '/AI-World/' : '/',
+  // If deploying on Netlify or root domain use '/', otherwise GitHub Pages uses '/AI-World/'
+  base: process.env.NETLIFY ? '/' : (process.env.GITHUB_PAGES === 'true' || process.env.CI ? '/AI-World/' : '/'),
 })
 
  
