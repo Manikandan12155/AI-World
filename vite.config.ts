@@ -8,6 +8,7 @@ export default defineConfig({
     tailwindcss(),
     react()
   ],
-  base: "/AI-World/",
+  base: process.env.NODE_ENV === 'production' ? '/AI-World/' : '/',
 })
+
  
