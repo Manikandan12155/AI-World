@@ -9,6 +9,8 @@ import { TECH_NODES_OVERLAY } from '../data/overlayData';
 import type { TechNodeOverlay } from '../data/overlayData';
 import * as THREE from 'three';
 
+import { getAssetUrl } from '../utils/assetPath';
+
 // 3D coordinates around Earth for the clean interactive labels
 export const ISLAND_3D_COORDS: Record<string, [number, number, number]> = {
   'ai-genai': [0.4, 3.4, 0.4],
@@ -60,9 +62,10 @@ const Realistic3DSatellite: React.FC<{
 
   // Load Aerospace Satellite Textures: Photovoltaic Solar Array & Gold MLI Thermal Foil
   const [solarTexture, goldFoilTexture] = useLoader(THREE.TextureLoader, [
-    '/textures/satellite_solar_cells.jpg',
-    '/textures/satellite_gold_foil.jpg'
+    getAssetUrl('/textures/satellite_solar_cells.jpg'),
+    getAssetUrl('/textures/satellite_gold_foil.jpg')
   ]);
+
 
   // Subtle satellite orbital orientation/drift
   useFrame(({ clock }, delta) => {

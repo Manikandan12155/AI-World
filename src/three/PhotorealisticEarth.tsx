@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { useFrame, useLoader } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Html } from '@react-three/drei';
+import { getAssetUrl } from '../utils/assetPath';
 
 export const PhotorealisticEarth: React.FC = () => {
   const earthRef = useRef<THREE.Mesh>(null);
@@ -11,11 +12,12 @@ export const PhotorealisticEarth: React.FC = () => {
 
   // Load official NASA photorealistic Earth textures
   const [diffuseMap, lightsMap, cloudsMap, specularMap] = useLoader(THREE.TextureLoader, [
-    '/textures/earth_diffuse.jpg',
-    '/textures/earth_lights.png',
-    '/textures/earth_clouds.jpg',
-    '/textures/earth_specular.jpg'
+    getAssetUrl('/textures/earth_diffuse.jpg'),
+    getAssetUrl('/textures/earth_lights.png'),
+    getAssetUrl('/textures/earth_clouds.jpg'),
+    getAssetUrl('/textures/earth_specular.jpg')
   ]);
+
 
   useFrame((_, delta) => {
     if (earthRef.current) {

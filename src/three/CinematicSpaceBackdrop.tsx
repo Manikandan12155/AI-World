@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { useLoader, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { getAssetUrl } from '../utils/assetPath';
 
 export const CinematicSpaceBackdrop: React.FC = () => {
   const skysphereRef = useRef<THREE.Mesh>(null);
@@ -8,10 +9,11 @@ export const CinematicSpaceBackdrop: React.FC = () => {
 
   // Load 360-degree Equirectangular Cosmic Texture (Full image + Seamless Opposite back image), Moon, and Flare
   const [spaceTexture, moonTexture, starburstTexture] = useLoader(THREE.TextureLoader, [
-    '/textures/milkyway_equirectangular_360.jpg',
-    '/textures/moon_1024.jpg',
-    '/textures/sun_starburst_clean.png'
+    getAssetUrl('/textures/milkyway_equirectangular_360.jpg'),
+    getAssetUrl('/textures/moon_1024.jpg'),
+    getAssetUrl('/textures/sun_starburst_clean.png')
   ]);
+
 
   // Orbit animations
   useFrame(({ clock }, delta) => {
