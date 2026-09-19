@@ -71,7 +71,18 @@ const SceneCameraController: React.FC<{
   useFrame(({ camera }) => {
     if (controlsRef.current) {
       if (selectedPlanetName && planetPositionsRef.current[selectedPlanetName]) {
-        const { pos: planetPos, viewDist } = planetPositionsRef.current[selectedPlanetName];
+        let { pos: planetPos, viewDist } = planetPositionsRef.current[selectedPlanetName];
+
+        // Mobile responsiveness adjustment:
+        // On narrow mobile screens (< 640px), scale up camera view distance (especially for Sun R=6.0) so it doesn't overflow mobile screen
+        const isMobile = window.innerWidth < 640;
+        if (isMobile) {
+          if (selectedPlanetName === 'Sun') {
+            viewDist *= 1.75; // Zoom out Sun view from 16.5 to ~28.8 on mobile screens
+          } else {
+            viewDist *= 1.25; // Slight zoom out for planets on mobile for better framing
+          }
+        }
 
         // 1. Lock orbit target center right onto the center of the planet
         controlsRef.current.target.lerp(planetPos, 0.08);
