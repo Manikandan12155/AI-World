@@ -8,8 +8,8 @@ export default defineConfig({
     tailwindcss(),
     react()
   ],
-  // If deploying on Netlify or root domain use '/', otherwise GitHub Pages uses '/AI-World/'
-  base: process.env.NETLIFY ? '/' : (process.env.GITHUB_PAGES === 'true' || process.env.CI ? '/AI-World/' : '/'),
+  // If deploying on Netlify use '/', otherwise default to GitHub Pages repository base '/AI-World/'
+  base: process.env.NETLIFY ? '/' : '/AI-World/',
 })
 
  
