@@ -1,6 +1,36 @@
 import React, { useRef, Suspense, useMemo, useState } from 'react';
 import { Canvas, useFrame, useLoader } from '@react-three/fiber';
-import { OrbitControls, Html } from '@react-three/drei';
+import { OrbitControls, Html, useProgress } from '@react-three/drei';
+
+function CanvasLoader() {
+  const { progress } = useProgress();
+  return (
+    <Html center zIndexRange={[100, 0]}>
+      <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-[#030a16]/95 backdrop-blur-xl border border-cyan-500/40 shadow-[0_0_50px_rgba(56,189,248,0.4)] text-center min-w-[260px] pointer-events-none">
+        <div className="relative w-14 h-14 mb-4 flex items-center justify-center">
+          <div className="absolute inset-0 rounded-full border-2 border-cyan-500/20 border-t-cyan-400 animate-spin" />
+          <div className="w-8 h-8 rounded-full bg-cyan-400/20 animate-ping" />
+          <span className="text-cyan-400 font-bold text-xs font-['Space_Grotesk']">3D</span>
+        </div>
+        <div className="text-cyan-300 font-bold text-sm tracking-wider uppercase mb-1 font-['Space_Grotesk']">
+          Loading Universe
+        </div>
+        <div className="text-slate-400 text-xs mb-3 font-medium">
+          Initializing 3D Shaders & Textures...
+        </div>
+        <div className="w-full bg-slate-800/80 rounded-full h-2 p-0.5 overflow-hidden border border-slate-700">
+          <div
+            className="bg-gradient-to-r from-cyan-500 via-sky-400 to-blue-500 h-full rounded-full transition-all duration-300 shadow-[0_0_12px_rgba(56,189,248,0.8)]"
+            style={{ width: `${Math.max(5, Math.min(100, progress))}%` }}
+          />
+        </div>
+        <div className="text-cyan-400 font-mono text-[11px] mt-2 font-semibold">
+          {Math.round(progress)}%
+        </div>
+      </div>
+    </Html>
+  );
+}
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { PhotorealisticEarth } from './PhotorealisticEarth';
 import { RealisticOrbitalBeams } from './RealisticOrbitalBeams';
@@ -584,7 +614,7 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
         }}
         dpr={[1, 2]}
       >
-        <Suspense fallback={null}>
+        <Suspense fallback={<CanvasLoader />}>
           <SceneCameraController
             selectedNode={selectedNode}
             selectedPlanetName={selectedPlanetName}
