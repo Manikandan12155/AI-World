@@ -81,88 +81,153 @@ const OrbitTrajectoryLine: React.FC<{
   );
 };
 
-// Realistic 3D Procedural Asteroid Belt Component (350+ Craggy Space Rocks Tumbling in Orbit)
+// Realistic 3D Procedural Asteroid Belt Component (500+ Craggy Space Rocks with HD Textures & Tumbling Physics)
 const ProceduralAsteroidBelt: React.FC = () => {
-  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const meshRef1 = useRef<THREE.InstancedMesh>(null);
+  const meshRef2 = useRef<THREE.InstancedMesh>(null);
+  const meshRef3 = useRef<THREE.InstancedMesh>(null);
+
+  const [astTex1, astTex2, astTex3] = useLoader(THREE.TextureLoader, [
+    getAssetUrl('/textures/Astroids 1.png'),
+    getAssetUrl('/textures/Astroids 2.png'),
+    getAssetUrl('/textures/Astroids 3.png'),
+  ]);
+
+  useMemo(() => {
+    if (astTex1) {
+      astTex1.colorSpace = THREE.SRGBColorSpace;
+      astTex1.wrapS = THREE.RepeatWrapping;
+      astTex1.wrapT = THREE.RepeatWrapping;
+    }
+    if (astTex2) {
+      astTex2.colorSpace = THREE.SRGBColorSpace;
+      astTex2.wrapS = THREE.RepeatWrapping;
+      astTex2.wrapT = THREE.RepeatWrapping;
+    }
+    if (astTex3) {
+      astTex3.colorSpace = THREE.SRGBColorSpace;
+      astTex3.wrapS = THREE.RepeatWrapping;
+      astTex3.wrapT = THREE.RepeatWrapping;
+    }
+  }, [astTex1, astTex2, astTex3]);
+
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
-  // Generate 350+ Asteroids with random orbit radii, angles, sizes, and tumbling spin speeds
-  const asteroidData = useMemo(() => {
-    return Array.from({ length: 350 }, () => {
-      // Scattered between Mars (R=45.0) and Jupiter (R=66.0) -> R = 51.0 to 59.5
-      const radius = 51.0 + Math.random() * 8.5;
-      const angle = Math.random() * Math.PI * 2;
-      const yOffset = (Math.random() - 0.5) * 3.8;
-      const scale = 0.08 + Math.random() * 0.28;
-      const orbitSpeed = 0.02 + Math.random() * 0.04;
-      const rotSpeedX = (Math.random() - 0.5) * 1.6;
-      const rotSpeedY = (Math.random() - 0.5) * 1.6;
-      const rotSpeedZ = (Math.random() - 0.5) * 1.6;
+  // Split 520+ Asteroids across 3 texture variants for rich visual diversity
+  const asteroidGroups = useMemo(() => {
+    const createGroup = (count: number) => {
+      return Array.from({ length: count }, () => {
+        // Scattered between Mars (R=45.0) and Jupiter (R=66.0) -> R = 50.0 to 60.5
+        const radius = 50.0 + Math.random() * 10.5;
+        const angle = Math.random() * Math.PI * 2;
+        const yOffset = (Math.random() - 0.5) * 4.5;
+        const scale = 0.12 + Math.random() * 0.42;
+        const orbitSpeed = 0.015 + Math.random() * 0.035;
+        const rotSpeedX = (Math.random() - 0.5) * 1.8;
+        const rotSpeedY = (Math.random() - 0.5) * 1.8;
+        const rotSpeedZ = (Math.random() - 0.5) * 1.8;
 
-      return {
-        radius,
-        angle,
-        yOffset,
-        scale,
-        orbitSpeed,
-        rotSpeedX,
-        rotSpeedY,
-        rotSpeedZ,
-        rotX: Math.random() * Math.PI,
-        rotY: Math.random() * Math.PI,
-        rotZ: Math.random() * Math.PI,
-      };
-    });
+        return {
+          radius,
+          angle,
+          yOffset,
+          scale,
+          orbitSpeed,
+          rotSpeedX,
+          rotSpeedY,
+          rotSpeedZ,
+          rotX: Math.random() * Math.PI,
+          rotY: Math.random() * Math.PI,
+          rotZ: Math.random() * Math.PI,
+        };
+      });
+    };
+
+    return [createGroup(180), createGroup(170), createGroup(170)];
   }, []);
 
-  // Create realistic craggy 3D asteroid rock geometry using distorted Dodecahedron vertices
-  const asteroidGeo = useMemo(() => {
-    const geo = new THREE.DodecahedronGeometry(1.0, 1);
-    const pos = geo.attributes.position;
-    for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i);
-      const y = pos.getY(i);
-      const z = pos.getZ(i);
-      const noise = 0.72 + Math.random() * 0.48;
-      pos.setXYZ(i, x * noise, y * noise, z * noise);
-    }
-    geo.computeVertexNormals();
-    return geo;
+  // Create 3 distinct craggy 3D asteroid rock geometries with vertex noise displacement
+  const [geo1, geo2, geo3] = useMemo(() => {
+    const createCraggyGeo = (seed: number) => {
+      const geo = new THREE.DodecahedronGeometry(1.0, 2);
+      const pos = geo.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i);
+        const y = pos.getY(i);
+        const z = pos.getZ(i);
+        // Micro-crater noise distortion
+        const noise = 0.65 + Math.sin(x * 3.5 + seed) * Math.cos(y * 3.5 + seed) * 0.38 + Math.random() * 0.18;
+        pos.setXYZ(i, x * noise, y * noise, z * noise);
+      }
+      geo.computeVertexNormals();
+      return geo;
+    };
+    return [createCraggyGeo(1.0), createCraggyGeo(2.5), createCraggyGeo(4.2)];
   }, []);
 
-  // 3D Orbital motion & tumbling spin update
+  // 3D Orbital motion & tumbling spin update for all 3 instanced groups
   useFrame((_, delta) => {
-    if (!meshRef.current) return;
+    const refs = [meshRef1, meshRef2, meshRef3];
+    asteroidGroups.forEach((group, gIdx) => {
+      const mesh = refs[gIdx].current;
+      if (!mesh) return;
 
-    asteroidData.forEach((ast, idx) => {
-      ast.angle += delta * ast.orbitSpeed;
-      ast.rotX += delta * ast.rotSpeedX;
-      ast.rotY += delta * ast.rotSpeedY;
-      ast.rotZ += delta * ast.rotSpeedZ;
+      group.forEach((ast, idx) => {
+        ast.angle += delta * ast.orbitSpeed;
+        ast.rotX += delta * ast.rotSpeedX;
+        ast.rotY += delta * ast.rotSpeedY;
+        ast.rotZ += delta * ast.rotSpeedZ;
 
-      const cosT = Math.cos(ast.angle);
-      const sinT = Math.sin(ast.angle);
+        const cosT = Math.cos(ast.angle);
+        const sinT = Math.sin(ast.angle);
 
-      dummy.position.set(
-        SUN_POS.x + (U.x * cosT + V.x * sinT) * ast.radius,
-        SUN_POS.y + (U.y * cosT + V.y * sinT) * ast.radius + ast.yOffset,
-        SUN_POS.z + (U.z * cosT + V.z * sinT) * ast.radius
-      );
+        dummy.position.set(
+          SUN_POS.x + (U.x * cosT + V.x * sinT) * ast.radius,
+          SUN_POS.y + (U.y * cosT + V.y * sinT) * ast.radius + ast.yOffset,
+          SUN_POS.z + (U.z * cosT + V.z * sinT) * ast.radius
+        );
 
-      dummy.rotation.set(ast.rotX, ast.rotY, ast.rotZ);
-      dummy.scale.set(ast.scale, ast.scale, ast.scale);
-      dummy.updateMatrix();
+        dummy.rotation.set(ast.rotX, ast.rotY, ast.rotZ);
+        dummy.scale.set(ast.scale, ast.scale, ast.scale);
+        dummy.updateMatrix();
 
-      meshRef.current!.setMatrixAt(idx, dummy.matrix);
+        mesh.setMatrixAt(idx, dummy.matrix);
+      });
+
+      mesh.instanceMatrix.needsUpdate = true;
     });
-
-    meshRef.current.instanceMatrix.needsUpdate = true;
   });
 
   return (
-    <instancedMesh ref={meshRef} args={[asteroidGeo, undefined, 350]}>
-      <meshStandardMaterial color="#857a70" roughness={0.9} metalness={0.2} />
-    </instancedMesh>
+    <group>
+      <instancedMesh ref={meshRef1} args={[geo1, undefined, asteroidGroups[0].length]}>
+        <meshStandardMaterial
+          map={astTex1}
+          bumpMap={astTex1}
+          bumpScale={0.15}
+          roughness={0.82}
+          metalness={0.35}
+        />
+      </instancedMesh>
+      <instancedMesh ref={meshRef2} args={[geo2, undefined, asteroidGroups[1].length]}>
+        <meshStandardMaterial
+          map={astTex2}
+          bumpMap={astTex2}
+          bumpScale={0.18}
+          roughness={0.78}
+          metalness={0.4}
+        />
+      </instancedMesh>
+      <instancedMesh ref={meshRef3} args={[geo3, undefined, asteroidGroups[2].length]}>
+        <meshStandardMaterial
+          map={astTex3}
+          bumpMap={astTex3}
+          bumpScale={0.2}
+          roughness={0.85}
+          metalness={0.3}
+        />
+      </instancedMesh>
+    </group>
   );
 };
 
