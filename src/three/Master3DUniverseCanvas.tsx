@@ -716,6 +716,19 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
             ✕ Close
           </button>
         )}
+
+        {/* Integrated AI Intelligence Button inside bottom bar */}
+        <button
+          onClick={() => {
+            const event = new CustomEvent('toggle-ai-assistant');
+            window.dispatchEvent(event);
+          }}
+          className="ml-1 px-3 py-1.5 rounded-full bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-400/60 text-cyan-300 font-semibold shadow-[0_0_12px_rgba(56,189,248,0.5)] flex items-center gap-1.5 shrink-0 transition-all cursor-pointer"
+        >
+          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+          <svg className="w-3.5 h-3.5 text-cyan-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+          <span>Ask Intelligence</span>
+        </button>
       </div>
     </div>
   );

@@ -30,7 +30,12 @@ export function App() {
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    const handleToggleAI = () => setIsAIAssistantOpen((prev) => !prev);
+    window.addEventListener('toggle-ai-assistant', handleToggleAI);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('toggle-ai-assistant', handleToggleAI);
+    };
   }, [isSearchOpen]);
 
   const navItems = ['Home', 'Tech News', 'Trends', 'Tools', 'Jobs', 'Research', 'About'];
@@ -210,10 +215,10 @@ export function App() {
       {/* Spacer to push content */}
       <div className="flex-1 pointer-events-none" />
 
-      {/* 5. FLOATING "ASK INTELLIGENCE" AI BUTTON */}
+      {/* 5. FLOATING "ASK INTELLIGENCE" AI BUTTON (Hidden on mobile as it's cleanly integrated into bottom celestial bar) */}
       <button
         onClick={() => setIsAIAssistantOpen(!isAIAssistantOpen)}
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-2 rounded-full bg-[#0a1b33]/90 hover:bg-[#102a52] border border-cyan-400/50 hover:border-cyan-400 text-white text-xs font-semibold shadow-[0_0_25px_rgba(56,189,248,0.4)] hover:scale-105 transition-all cursor-pointer pointer-events-auto"
+        className="hidden sm:flex fixed bottom-6 right-6 z-40 items-center gap-2 px-4 py-2 rounded-full bg-[#0a1b33]/90 hover:bg-[#102a52] border border-cyan-400/50 hover:border-cyan-400 text-white text-xs font-semibold shadow-[0_0_25px_rgba(56,189,248,0.4)] hover:scale-105 transition-all cursor-pointer pointer-events-auto"
       >
         <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
         <Bot className="w-4 h-4 text-cyan-400" />
