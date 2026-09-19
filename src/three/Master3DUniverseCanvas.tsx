@@ -643,13 +643,13 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
       </Canvas>
 
       {/* Floating Celestial Navigation Control Bar */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-auto flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-full bg-[#050d1d]/90 backdrop-blur-md border border-slate-700/60 shadow-[0_10px_35px_rgba(0,0,0,0.85)] text-xs max-w-[95vw]">
+      <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-auto flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-full bg-[#050d1d]/90 backdrop-blur-md border border-slate-700/60 shadow-[0_10px_35px_rgba(0,0,0,0.85)] text-xs max-w-[92vw] sm:max-w-max overflow-x-auto no-scrollbar whitespace-nowrap">
         <button
           onClick={() => {
             setSelectedPlanetName(null);
             setViewMode('earth');
           }}
-          className={`px-3 py-1.5 rounded-full font-semibold transition-all cursor-pointer ${
+          className={`px-3 py-1.5 rounded-full font-semibold transition-all cursor-pointer shrink-0 ${
             viewMode === 'earth' && !selectedPlanetName
               ? 'bg-cyan-500 text-black shadow-[0_0_18px_rgba(56,189,248,0.8)] scale-105'
               : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
@@ -662,7 +662,7 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
             setSelectedPlanetName(null);
             setViewMode('solarsystem');
           }}
-          className={`px-3 py-1.5 rounded-full font-semibold transition-all cursor-pointer ${
+          className={`px-3 py-1.5 rounded-full font-semibold transition-all cursor-pointer shrink-0 ${
             viewMode === 'solarsystem' && !selectedPlanetName
               ? 'bg-amber-400 text-black shadow-[0_0_18px_rgba(251,191,36,0.8)] scale-105'
               : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
@@ -672,7 +672,7 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
         </button>
 
         {/* Quick-Jump Planet Selectors for seamless navigation between planets */}
-        <div className="flex items-center gap-1 pl-1.5 border-l border-slate-700/80">
+        <div className="flex items-center gap-1 pl-1.5 border-l border-slate-700/80 shrink-0">
           {(['Sun', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune'] as const).map((pName) => {
             const isCurrent = selectedPlanetName === pName;
             return (
@@ -682,7 +682,7 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
                   setSelectedPlanetName(pName);
                   setViewMode('earth');
                 }}
-                className={`px-2 py-1 rounded-full text-[11px] font-medium transition-all cursor-pointer ${
+                className={`px-2 py-1 rounded-full text-[11px] font-medium transition-all cursor-pointer shrink-0 ${
                   isCurrent
                     ? pName === 'Sun'
                       ? 'bg-amber-400 text-black font-bold shadow-[0_0_14px_rgba(251,191,36,0.95)] scale-105'
@@ -710,7 +710,7 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
               setSelectedPlanetName(null);
               setViewMode('solarsystem');
             }}
-            className="text-slate-400 hover:text-rose-400 ml-1 text-xs font-bold cursor-pointer transition-colors px-1"
+            className="text-slate-400 hover:text-rose-400 ml-1 text-xs font-bold cursor-pointer transition-colors px-1.5 py-1 rounded-full bg-slate-800/50 shrink-0"
             title="Return to Solar System Overview"
           >
             ✕ Close
