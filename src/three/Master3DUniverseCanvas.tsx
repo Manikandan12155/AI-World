@@ -1,10 +1,11 @@
-import React, { useRef, Suspense } from 'react';
+import React, { useRef, Suspense, useMemo, useState } from 'react';
 import { Canvas, useFrame, useLoader } from '@react-three/fiber';
 import { OrbitControls, Html } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { PhotorealisticEarth } from './PhotorealisticEarth';
 import { RealisticOrbitalBeams } from './RealisticOrbitalBeams';
 import { CinematicSpaceBackdrop } from './CinematicSpaceBackdrop';
+import { SolarSystemPlanets } from './SolarSystemPlanets';
 import { TECH_NODES_OVERLAY } from '../data/overlayData';
 import type { TechNodeOverlay } from '../data/overlayData';
 import * as THREE from 'three';
@@ -29,20 +30,55 @@ interface MasterUniverseProps {
   onSelectNode: (node: TechNodeOverlay) => void;
 }
 
-// Controller to smoothly animate OrbitControls target when a node is clicked
+// Controller to smoothly animate OrbitControls target when a node or planet is clicked
 const SceneCameraController: React.FC<{
   selectedNode: TechNodeOverlay | null;
+  selectedPlanetName: string | null;
+  viewMode: 'earth' | 'solarsystem';
   controlsRef: React.RefObject<OrbitControlsImpl | null>;
-}> = ({ selectedNode, controlsRef }) => {
-  useFrame(() => {
+  planetPositionsRef: React.MutableRefObject<Record<string, { pos: THREE.Vector3; viewDist: number }>>;
+}> = ({ selectedNode, selectedPlanetName, viewMode, controlsRef, planetPositionsRef }) => {
+  useFrame(({ camera }) => {
     if (controlsRef.current) {
-      if (selectedNode && ISLAND_3D_COORDS[selectedNode.id]) {
+      if (selectedPlanetName && planetPositionsRef.current[selectedPlanetName]) {
+        const { pos: planetPos, viewDist } = planetPositionsRef.current[selectedPlanetName];
+
+        // 1. Lock orbit target center right onto the center of the planet
+        controlsRef.current.target.lerp(planetPos, 0.08);
+
+        // 2. Camera flies up close in front of the planet (Earth-sized view!)
+        // Once arrived, let OrbitControls have full free 360° rotation around the planet without snapping!
+        const camOffset = camera.position.clone().sub(planetPos);
+        const currentDist = camOffset.length();
+        if (Math.abs(currentDist - viewDist) > 0.3) {
+          if (currentDist < 0.1) camOffset.set(0, 1, 2);
+          const desiredCamPos = planetPos.clone().add(camOffset.normalize().multiplyScalar(viewDist));
+          camera.position.lerp(desiredCamPos, 0.08);
+        }
+      } else if (viewMode === 'solarsystem') {
+        // Macro view: observe entire solar system center
+        const targetPos = new THREE.Vector3(12, 0, 0);
+        controlsRef.current.target.lerp(targetPos, 0.05);
+
+        // Fly camera out to overview distance (110 units) ONLY when zooming in/out!
+        // Once arrived, stop camera lerp to allow 100% free 360° orbit rotation at any angle without snapping back!
+        const camOffset = camera.position.clone().sub(targetPos);
+        const currentDist = camOffset.length();
+        if (Math.abs(currentDist - 110) > 6.0) {
+          if (currentDist < 0.1) camOffset.set(0, 50, 100);
+          const desiredCamPos = targetPos.clone().add(camOffset.normalize().multiplyScalar(110));
+          camera.position.lerp(desiredCamPos, 0.05);
+        }
+      } else if (selectedNode && ISLAND_3D_COORDS[selectedNode.id]) {
         const pos = ISLAND_3D_COORDS[selectedNode.id];
-        // Smoothly target the selected node
         controlsRef.current.target.lerp(new THREE.Vector3(pos[0] * 0.6, pos[1] * 0.6, 0), 0.05);
       } else {
         // Return smoothly to Earth center
         controlsRef.current.target.lerp(new THREE.Vector3(0.35, 0.05, 0), 0.04);
+        // If camera was far out in deep space, smoothly return to Earth orbit distance
+        if (!selectedNode && viewMode === 'earth' && !selectedPlanetName && camera.position.length() > 25) {
+          camera.position.lerp(new THREE.Vector3(0, 0, 13.2), 0.04);
+        }
       }
       controlsRef.current.update();
     }
@@ -52,6 +88,354 @@ const SceneCameraController: React.FC<{
 };
 
 // Realistic Procedural 3D Satellite Component with Solar Panels, Dish Antenna & HUD Tag
+// ============================================================================
+// 4 DISTINCT SCI-FI AEROSPACE SATELLITE DESIGNS (Exact Sketchfab Reference)
+// ============================================================================
+
+// Type 1: Deep Space 4-Wing X-Array Explorer (Models 3 & 5 in Sketchfab)
+// Used for: 'ai-genai', 'ai-agents', 'trending'
+const DeepSpaceXExplorer: React.FC<{
+  solarTexture: THREE.Texture;
+  goldFoilTexture: THREE.Texture;
+  glowColor: string;
+}> = ({ solarTexture, goldFoilTexture, glowColor }) => (
+  <group rotation={[0.25, 0.4, 0.15]}>
+    {/* Central Fuselage & Nose Probe */}
+    <group rotation={[0, 0, Math.PI / 2]}>
+      <mesh position={[0, 0, 0]}>
+        <cylinderGeometry args={[0.085, 0.085, 0.72, 32]} />
+        <meshStandardMaterial color="#f8fafc" metalness={0.7} roughness={0.25} />
+      </mesh>
+      <mesh position={[0, 0.36, 0]}>
+        <sphereGeometry args={[0.084, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <meshStandardMaterial color="#e2e8f0" metalness={0.65} roughness={0.3} />
+      </mesh>
+      <mesh position={[0, 0.58, 0]}>
+        <cylinderGeometry args={[0.005, 0.003, 0.36, 8]} />
+        <meshStandardMaterial color="#94a3b8" metalness={0.9} roughness={0.1} />
+      </mesh>
+      <mesh position={[0, 0.76, 0]}>
+        <sphereGeometry args={[0.013, 8, 8]} />
+        <meshBasicMaterial color={glowColor} />
+      </mesh>
+      {/* Gold MLI Blanket */}
+      <mesh position={[0, -0.04, 0]}>
+        <cylinderGeometry args={[0.09, 0.09, 0.22, 32]} />
+        <meshStandardMaterial map={goldFoilTexture} metalness={0.9} roughness={0.25} color="#ffe58f" />
+      </mesh>
+      <mesh position={[0, 0.11, 0]}>
+        <torusGeometry args={[0.092, 0.01, 12, 32]} />
+        <meshStandardMaterial color="#334155" metalness={0.85} roughness={0.3} />
+      </mesh>
+      <mesh position={[0, -0.19, 0]}>
+        <torusGeometry args={[0.092, 0.01, 12, 32]} />
+        <meshStandardMaterial color="#334155" metalness={0.85} roughness={0.3} />
+      </mesh>
+      {/* Ion Thruster Bell */}
+      <group position={[0, -0.42, 0]} rotation={[Math.PI, 0, 0]}>
+        <mesh>
+          <cylinderGeometry args={[0.05, 0.082, 0.13, 24, 1, true]} />
+          <meshStandardMaterial color="#475569" metalness={0.85} roughness={0.25} side={THREE.DoubleSide} />
+        </mesh>
+        <mesh position={[0, -0.02, 0]}>
+          <sphereGeometry args={[0.035, 16, 16]} />
+          <meshBasicMaterial color="#38bdf8" transparent opacity={0.85} />
+        </mesh>
+        <pointLight color="#38bdf8" intensity={1.5} distance={1.2} />
+      </group>
+    </group>
+    {/* Communications Dish */}
+    <group position={[-0.11, 0.14, 0.12]} rotation={[0.45, -0.6, 0.2]}>
+      <mesh position={[0, 0, -0.07]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.009, 0.009, 0.15, 8]} />
+        <meshStandardMaterial color="#1e293b" metalness={0.9} />
+      </mesh>
+      <mesh>
+        <cylinderGeometry args={[0.16, 0.02, 0.065, 32, 1, true]} />
+        <meshStandardMaterial color="#f8fafc" metalness={0.5} roughness={0.2} side={THREE.DoubleSide} />
+      </mesh>
+      <mesh position={[0, 0.07, 0]}>
+        <cylinderGeometry args={[0.01, 0.01, 0.1, 8]} />
+        <meshBasicMaterial color="#0284c7" />
+      </mesh>
+      <mesh position={[0, 0.12, 0]}>
+        <sphereGeometry args={[0.016, 8, 8]} />
+        <meshBasicMaterial color={glowColor} />
+      </mesh>
+    </group>
+    {/* 4 Angled X-Wings */}
+    <group position={[0, 0, 0]}>
+      {[Math.PI / 4, (3 * Math.PI) / 4, (5 * Math.PI) / 4, (7 * Math.PI) / 4].map((angle, idx) => (
+        <group key={idx} rotation={[0, 0, angle]}>
+          <mesh position={[0, 0.20, 0]}>
+            <cylinderGeometry args={[0.01, 0.01, 0.22, 8]} />
+            <meshStandardMaterial color="#1e293b" metalness={0.9} />
+          </mesh>
+          <group position={[0, 0.44, 0]}>
+            <mesh>
+              <boxGeometry args={[0.20, 0.40, 0.012]} />
+              <meshStandardMaterial color="#0f172a" metalness={0.8} roughness={0.3} />
+            </mesh>
+            <mesh position={[0, 0, 0.008]}>
+              <planeGeometry args={[0.185, 0.38]} />
+              <meshStandardMaterial map={solarTexture} metalness={0.8} roughness={0.18} />
+            </mesh>
+            <mesh position={[0, 0, -0.008]} rotation={[0, Math.PI, 0]}>
+              <planeGeometry args={[0.185, 0.38]} />
+              <meshStandardMaterial map={solarTexture} metalness={0.8} roughness={0.18} />
+            </mesh>
+          </group>
+        </group>
+      ))}
+    </group>
+    <mesh position={[0, -0.2, 0.11]}>
+      <sphereGeometry args={[0.03, 12, 12]} />
+      <meshBasicMaterial color={glowColor} />
+    </mesh>
+    <pointLight color={glowColor} intensity={2.0} distance={2.5} />
+  </group>
+);
+
+// Type 2: Starlink Phased-Array Flat Satellite (Model 1 in Sketchfab)
+// Used for: 'cloud', 'cybersecurity'
+const StarlinkCommsSat: React.FC<{
+  solarTexture: THREE.Texture;
+  goldFoilTexture: THREE.Texture;
+  glowColor: string;
+}> = ({ solarTexture, goldFoilTexture, glowColor }) => (
+  <group rotation={[0.4, -0.3, 0.1]}>
+    {/* Flat Compact Avionics Chassis Bus */}
+    <mesh position={[0, 0, 0]}>
+      <boxGeometry args={[0.56, 0.28, 0.06]} />
+      <meshStandardMaterial color="#e2e8f0" metalness={0.85} roughness={0.2} />
+    </mesh>
+    {/* Underside Gold Thermal Blanket */}
+    <mesh position={[0, 0, -0.032]}>
+      <planeGeometry args={[0.54, 0.26]} />
+      <meshStandardMaterial map={goldFoilTexture} metalness={0.9} roughness={0.25} />
+    </mesh>
+    {/* Flat Phased Array Antenna Grid on Top */}
+    <mesh position={[0.12, 0, 0.032]}>
+      <cylinderGeometry args={[0.10, 0.10, 0.008, 24]} />
+      <meshStandardMaterial color="#0284c7" metalness={0.6} roughness={0.2} />
+    </mesh>
+    <mesh position={[-0.14, 0, 0.032]}>
+      <cylinderGeometry args={[0.08, 0.08, 0.008, 24]} />
+      <meshStandardMaterial color="#38bdf8" metalness={0.6} roughness={0.2} />
+    </mesh>
+    {/* Star Tracker Optics & Laser Comm Optical Head */}
+    <mesh position={[0.24, 0.11, 0.03]}>
+      <boxGeometry args={[0.05, 0.05, 0.04]} />
+      <meshStandardMaterial color="#0f172a" metalness={0.9} />
+    </mesh>
+    <mesh position={[0.24, 0.11, 0.052]}>
+      <sphereGeometry args={[0.018, 12, 12]} />
+      <meshBasicMaterial color={glowColor} />
+    </mesh>
+    {/* Single Large Accordion Deployable Solar Wing */}
+    <group position={[-0.28, 0, 0]}>
+      <mesh position={[-0.12, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.012, 0.012, 0.24, 8]} />
+        <meshStandardMaterial color="#334155" metalness={0.9} />
+      </mesh>
+      <group position={[-0.56, 0, 0]}>
+        <mesh>
+          <boxGeometry args={[0.68, 0.36, 0.012]} />
+          <meshStandardMaterial color="#0f172a" metalness={0.8} />
+        </mesh>
+        <mesh position={[0, 0, 0.008]}>
+          <planeGeometry args={[0.66, 0.34]} />
+          <meshStandardMaterial map={solarTexture} metalness={0.8} roughness={0.18} />
+        </mesh>
+        <mesh position={[0, 0, -0.008]} rotation={[0, Math.PI, 0]}>
+          <planeGeometry args={[0.66, 0.34]} />
+          <meshStandardMaterial map={solarTexture} metalness={0.8} roughness={0.18} />
+        </mesh>
+      </group>
+    </group>
+    {/* Krypton Hall-Effect Thruster at Aft */}
+    <mesh position={[0.28, 0, 0]}>
+      <boxGeometry args={[0.04, 0.08, 0.03]} />
+      <meshStandardMaterial color="#475569" metalness={0.9} />
+    </mesh>
+    <mesh position={[0.305, 0, 0]}>
+      <sphereGeometry args={[0.02, 12, 12]} />
+      <meshBasicMaterial color="#38bdf8" />
+    </mesh>
+    <pointLight color={glowColor} intensity={2.0} distance={2.5} position={[0.24, 0.11, 0.06]} />
+  </group>
+);
+
+// Type 3: Orbital Space Station / Modular ISS Science Lab (Models 2 & 4 in Sketchfab)
+// Used for: 'research', 'development'
+const OrbitalStationLab: React.FC<{
+  solarTexture: THREE.Texture;
+  goldFoilTexture: THREE.Texture;
+  glowColor: string;
+}> = ({ solarTexture, goldFoilTexture, glowColor }) => (
+  <group rotation={[0.15, 0.6, -0.2]}>
+    {/* Central Cylindrical Habitat Module */}
+    <mesh position={[0, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+      <cylinderGeometry args={[0.11, 0.11, 0.52, 24]} />
+      <meshStandardMaterial color="#f1f5f9" metalness={0.65} roughness={0.3} />
+    </mesh>
+    {/* Transverse Cross Science Module */}
+    <mesh position={[0, 0, 0]}>
+      <cylinderGeometry args={[0.09, 0.09, 0.38, 24]} />
+      <meshStandardMaterial color="#e2e8f0" metalness={0.7} roughness={0.25} />
+    </mesh>
+    {/* Gold MLI Thermal Collar */}
+    <mesh position={[0, 0, 0]}>
+      <cylinderGeometry args={[0.115, 0.115, 0.12, 24]} />
+      <meshStandardMaterial map={goldFoilTexture} metalness={0.9} roughness={0.25} color="#ffe58f" />
+    </mesh>
+    {/* Docking Node Port Ring */}
+    <mesh position={[0, 0.20, 0]}>
+      <torusGeometry args={[0.06, 0.015, 8, 24]} />
+      <meshStandardMaterial color="#64748b" metalness={0.9} />
+    </mesh>
+    {/* Long Carbon Structural Truss Girder Beams extending Left & Right */}
+    <mesh position={[0, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+      <cylinderGeometry args={[0.012, 0.012, 1.25, 8]} />
+      <meshStandardMaterial color="#1e293b" metalness={0.9} />
+    </mesh>
+    {/* Dual Large Solar Array Wings (Left Twin Panels) */}
+    <group position={[-0.78, 0, 0]}>
+      <mesh>
+        <boxGeometry args={[0.42, 0.28, 0.012]} />
+        <meshStandardMaterial color="#0f172a" metalness={0.8} />
+      </mesh>
+      <mesh position={[0, 0, 0.008]}>
+        <planeGeometry args={[0.40, 0.26]} />
+        <meshStandardMaterial map={solarTexture} metalness={0.8} roughness={0.18} />
+      </mesh>
+      <mesh position={[0, 0, -0.008]} rotation={[0, Math.PI, 0]}>
+        <planeGeometry args={[0.40, 0.26]} />
+        <meshStandardMaterial map={solarTexture} metalness={0.8} roughness={0.18} />
+      </mesh>
+    </group>
+    {/* Dual Large Solar Array Wings (Right Twin Panels) */}
+    <group position={[0.78, 0, 0]}>
+      <mesh>
+        <boxGeometry args={[0.42, 0.28, 0.012]} />
+        <meshStandardMaterial color="#0f172a" metalness={0.8} />
+      </mesh>
+      <mesh position={[0, 0, 0.008]}>
+        <planeGeometry args={[0.40, 0.26]} />
+        <meshStandardMaterial map={solarTexture} metalness={0.8} roughness={0.18} />
+      </mesh>
+      <mesh position={[0, 0, -0.008]} rotation={[0, Math.PI, 0]}>
+        <planeGeometry args={[0.40, 0.26]} />
+        <meshStandardMaterial map={solarTexture} metalness={0.8} roughness={0.18} />
+      </mesh>
+    </group>
+    {/* Heat Dissipation Radiator Fins */}
+    <mesh position={[0, -0.22, 0]} rotation={[Math.PI / 2, 0, 0]}>
+      <planeGeometry args={[0.22, 0.16]} />
+      <meshStandardMaterial color="#cbd5e1" metalness={0.4} roughness={0.3} side={THREE.DoubleSide} />
+    </mesh>
+    {/* Observation Cupola Window Dome */}
+    <mesh position={[0, 0, 0.14]}>
+      <sphereGeometry args={[0.04, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
+      <meshBasicMaterial color={glowColor} />
+    </mesh>
+    <pointLight color={glowColor} intensity={2.0} distance={2.5} position={[0, 0, 0.16]} />
+  </group>
+);
+
+// Type 4: Telecom Heavy Relay Satellite (Model 6 in Sketchfab)
+// Used for: 'hardware', 'tech-jobs'
+const TelecomHeavyRelay: React.FC<{
+  solarTexture: THREE.Texture;
+  goldFoilTexture: THREE.Texture;
+  glowColor: string;
+}> = ({ solarTexture, goldFoilTexture, glowColor }) => (
+  <group rotation={[-0.3, 0.5, 0.2]}>
+    {/* Hexagonal Central Avionics Core */}
+    <mesh position={[0, 0, 0]} rotation={[0, Math.PI / 6, 0]}>
+      <cylinderGeometry args={[0.13, 0.13, 0.38, 6]} />
+      <meshStandardMaterial map={goldFoilTexture} metalness={0.9} roughness={0.25} color="#ffe58f" />
+    </mesh>
+    {/* Top & Bottom Structural Caps */}
+    <mesh position={[0, 0.20, 0]}>
+      <cylinderGeometry args={[0.12, 0.12, 0.03, 6]} />
+      <meshStandardMaterial color="#334155" metalness={0.9} />
+    </mesh>
+    <mesh position={[0, -0.20, 0]}>
+      <cylinderGeometry args={[0.12, 0.12, 0.03, 6]} />
+      <meshStandardMaterial color="#334155" metalness={0.9} />
+    </mesh>
+    {/* Dual Large Parabolic Comms Dishes (Left & Right) */}
+    <group position={[-0.18, 0, 0.12]} rotation={[0.3, -0.8, 0]}>
+      <mesh>
+        <cylinderGeometry args={[0.16, 0.02, 0.05, 24, 1, true]} />
+        <meshStandardMaterial color="#f8fafc" metalness={0.6} roughness={0.2} side={THREE.DoubleSide} />
+      </mesh>
+      <mesh position={[0, 0.06, 0]}>
+        <cylinderGeometry args={[0.008, 0.008, 0.08, 8]} />
+        <meshBasicMaterial color="#38bdf8" />
+      </mesh>
+    </group>
+    <group position={[0.18, 0, 0.12]} rotation={[0.3, 0.8, 0]}>
+      <mesh>
+        <cylinderGeometry args={[0.16, 0.02, 0.05, 24, 1, true]} />
+        <meshStandardMaterial color="#f8fafc" metalness={0.6} roughness={0.2} side={THREE.DoubleSide} />
+      </mesh>
+      <mesh position={[0, 0.06, 0]}>
+        <cylinderGeometry args={[0.008, 0.008, 0.08, 8]} />
+        <meshBasicMaterial color="#38bdf8" />
+      </mesh>
+    </group>
+    {/* Twin Articulated Solar Array Wings (Angled Outward) */}
+    <group position={[-0.56, 0, 0]} rotation={[0, 0.2, 0]}>
+      <mesh>
+        <boxGeometry args={[0.48, 0.24, 0.012]} />
+        <meshStandardMaterial color="#0f172a" metalness={0.8} />
+      </mesh>
+      <mesh position={[0, 0, 0.008]}>
+        <planeGeometry args={[0.46, 0.22]} />
+        <meshStandardMaterial map={solarTexture} metalness={0.8} roughness={0.18} />
+      </mesh>
+      <mesh position={[0, 0, -0.008]} rotation={[0, Math.PI, 0]}>
+        <planeGeometry args={[0.46, 0.22]} />
+        <meshStandardMaterial map={solarTexture} metalness={0.8} roughness={0.18} />
+      </mesh>
+    </group>
+    <group position={[0.56, 0, 0]} rotation={[0, -0.2, 0]}>
+      <mesh>
+        <boxGeometry args={[0.48, 0.24, 0.012]} />
+        <meshStandardMaterial color="#0f172a" metalness={0.8} />
+      </mesh>
+      <mesh position={[0, 0, 0.008]}>
+        <planeGeometry args={[0.46, 0.22]} />
+        <meshStandardMaterial map={solarTexture} metalness={0.8} roughness={0.18} />
+      </mesh>
+      <mesh position={[0, 0, -0.008]} rotation={[0, Math.PI, 0]}>
+        <planeGeometry args={[0.46, 0.22]} />
+        <meshStandardMaterial map={solarTexture} metalness={0.8} roughness={0.18} />
+      </mesh>
+    </group>
+    {/* Dual Aft Thruster Nozzles */}
+    <group position={[0, -0.24, 0]}>
+      <mesh position={[-0.05, 0, 0]}>
+        <cylinderGeometry args={[0.025, 0.04, 0.06, 16]} />
+        <meshStandardMaterial color="#475569" metalness={0.9} />
+      </mesh>
+      <mesh position={[0.05, 0, 0]}>
+        <cylinderGeometry args={[0.025, 0.04, 0.06, 16]} />
+        <meshStandardMaterial color="#475569" metalness={0.9} />
+      </mesh>
+      <mesh position={[0, 0, 0.08]}>
+        <sphereGeometry args={[0.022, 12, 12]} />
+        <meshBasicMaterial color={glowColor} />
+      </mesh>
+    </group>
+    <pointLight color={glowColor} intensity={2.0} distance={2.5} position={[0, 0, 0.12]} />
+  </group>
+);
+
+
+// Master Satellite Component Dispatcher
 const Realistic3DSatellite: React.FC<{
   node: TechNodeOverlay;
   pos: [number, number, number];
@@ -66,104 +450,96 @@ const Realistic3DSatellite: React.FC<{
     getAssetUrl('/textures/satellite_gold_foil.jpg')
   ]);
 
+  useMemo(() => {
+    if (solarTexture) solarTexture.colorSpace = THREE.SRGBColorSpace;
+    if (goldFoilTexture) goldFoilTexture.colorSpace = THREE.SRGBColorSpace;
+  }, [solarTexture, goldFoilTexture]);
 
-  // Subtle satellite orbital orientation/drift
+  // Unique orbital rotation speed and drift for each satellite
+  const rotSpeed = useMemo(() => {
+    switch (node.id) {
+      case 'ai-genai':
+      case 'ai-agents':
+        return 0.32;
+      case 'cloud':
+      case 'cybersecurity':
+        return 0.22;
+      case 'research':
+      case 'development':
+        return 0.18;
+      default:
+        return 0.26;
+    }
+  }, [node.id]);
+
   useFrame(({ clock }, delta) => {
     if (satelliteRef.current) {
-      satelliteRef.current.rotation.y += delta * 0.35;
-      satelliteRef.current.rotation.z = Math.sin(clock.getElapsedTime() * 0.4) * 0.12;
+      satelliteRef.current.rotation.y += delta * rotSpeed;
+      satelliteRef.current.rotation.x = Math.sin(clock.getElapsedTime() * 0.35 + node.name.length) * 0.07;
     }
   });
 
+  // Select which architecture to render based on tech category
+  const renderSatelliteModel = () => {
+    switch (node.id) {
+      case 'ai-genai':
+      case 'ai-agents':
+      case 'trending':
+        return (
+          <DeepSpaceXExplorer
+            solarTexture={solarTexture}
+            goldFoilTexture={goldFoilTexture}
+            glowColor={node.glowColor}
+          />
+        );
+      case 'cloud':
+      case 'cybersecurity':
+        return (
+          <StarlinkCommsSat
+            solarTexture={solarTexture}
+            goldFoilTexture={goldFoilTexture}
+            glowColor={node.glowColor}
+          />
+        );
+      case 'research':
+      case 'development':
+        return (
+          <OrbitalStationLab
+            solarTexture={solarTexture}
+            goldFoilTexture={goldFoilTexture}
+            glowColor={node.glowColor}
+          />
+        );
+      case 'hardware':
+      case 'tech-jobs':
+      default:
+        return (
+          <TelecomHeavyRelay
+            solarTexture={solarTexture}
+            goldFoilTexture={goldFoilTexture}
+            glowColor={node.glowColor}
+          />
+        );
+    }
+  };
+
   return (
     <group position={pos}>
-      {/* 3D Real Satellite Mesh Group */}
+      {/* 3D Satellite Mesh with Unique Architecture (Compact & Sleek Scale) */}
       <group
         ref={satelliteRef}
-        scale={isSelected ? 1.4 : 1.0}
+        scale={isSelected ? 0.95 : 0.72}
         onClick={(e) => {
           e.stopPropagation();
           onSelect(node);
         }}
       >
-        {/* 1. Main Satellite Bus / Body (NASA Kapton Gold Thermal Foil Texture) */}
-        <mesh>
-          <boxGeometry args={[0.26, 0.32, 0.26]} />
-          <meshStandardMaterial
-            map={goldFoilTexture}
-            roughness={0.3}
-            metalness={0.85}
-            color="#fff0bd"
-          />
-        </mesh>
-
-        {/* 2. Top Sensor / Optics Tracking Cylinder */}
-        <mesh position={[0, 0.2, 0]}>
-          <cylinderGeometry args={[0.08, 0.1, 0.12, 16]} />
-          <meshStandardMaterial color="#1e293b" metalness={0.8} roughness={0.3} />
-        </mesh>
-
-        {/* 3. Parabolic High-Gain Communications Dish Antenna */}
-        <group position={[0, 0, 0.22]} rotation={[0.4, 0, 0]}>
-          <mesh>
-            <cylinderGeometry args={[0.18, 0.02, 0.06, 24, 1, true]} />
-            <meshStandardMaterial color="#f1f5f9" metalness={0.6} roughness={0.2} side={THREE.DoubleSide} />
-          </mesh>
-          {/* Feed horn */}
-          <mesh position={[0, 0.06, 0]}>
-            <cylinderGeometry args={[0.015, 0.015, 0.09, 8]} />
-            <meshBasicMaterial color="#38bdf8" />
-          </mesh>
-        </group>
-
-        {/* 4. Left Solar Array Wing (Silicon Photovoltaic Texture) */}
-        <group position={[-0.52, 0, 0]}>
-          {/* Solar Panel Connecting Carbon Mast */}
-          <mesh position={[0.28, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.018, 0.018, 0.26, 8]} />
-            <meshStandardMaterial color="#475569" metalness={0.9} />
-          </mesh>
-          {/* Photovoltaic Solar Array Panel */}
-          <mesh>
-            <boxGeometry args={[0.48, 0.24, 0.018]} />
-            <meshStandardMaterial
-              map={solarTexture}
-              metalness={0.65}
-              roughness={0.2}
-            />
-          </mesh>
-        </group>
-
-        {/* 5. Right Solar Array Wing (Silicon Photovoltaic Texture) */}
-        <group position={[0.52, 0, 0]}>
-          {/* Solar Panel Connecting Carbon Mast */}
-          <mesh position={[-0.28, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.018, 0.018, 0.26, 8]} />
-            <meshStandardMaterial color="#475569" metalness={0.9} />
-          </mesh>
-          {/* Photovoltaic Solar Array Panel */}
-          <mesh>
-            <boxGeometry args={[0.48, 0.24, 0.018]} />
-            <meshStandardMaterial
-              map={solarTexture}
-              metalness={0.65}
-              roughness={0.2}
-            />
-          </mesh>
-        </group>
-
-        {/* 6. Active Telemetry Beacon Strobe Light */}
-        <mesh position={[0, -0.18, 0]}>
-          <sphereGeometry args={[0.038, 12, 12]} />
-          <meshBasicMaterial color={node.glowColor} />
-        </mesh>
-        <pointLight color={node.glowColor} intensity={2.2} distance={2.5} />
+        {renderSatelliteModel()}
       </group>
-
 
       {/* Floating HUD Satellite Tag Label */}
       <Html
-        position={[0, 0.42, 0]}
+        position={[0, 0.36, 0]}
         center
         distanceFactor={7.2}
         className="pointer-events-auto select-none"
@@ -193,6 +569,9 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
   onSelectNode
 }) => {
   const controlsRef = useRef<OrbitControlsImpl>(null);
+  const planetPositionsRef = useRef<Record<string, { pos: THREE.Vector3; viewDist: number }>>({});
+  const [selectedPlanetName, setSelectedPlanetName] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'earth' | 'solarsystem'>('earth');
 
   return (
     <div className="absolute inset-0 w-full h-full pointer-events-auto cursor-grab active:cursor-grabbing">
@@ -206,9 +585,15 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
         dpr={[1, 2]}
       >
         <Suspense fallback={null}>
-          <SceneCameraController selectedNode={selectedNode} controlsRef={controlsRef} />
+          <SceneCameraController
+            selectedNode={selectedNode}
+            selectedPlanetName={selectedPlanetName}
+            viewMode={viewMode}
+            controlsRef={controlsRef}
+            planetPositionsRef={planetPositionsRef}
+          />
 
-          {/* Interactive 360-degree OrbitControls */}
+          {/* Interactive 360-degree OrbitControls allowing smooth zoom between Earth and Solar System */}
           <OrbitControls
             ref={controlsRef}
             enableDamping
@@ -216,14 +601,25 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
             rotateSpeed={0.8}
             zoomSpeed={0.9}
             panSpeed={0.8}
-            minDistance={4.5}
-            maxDistance={25}
+            minDistance={2.5}
+            maxDistance={180}
             enablePan={true}
           />
 
           <CinematicSpaceBackdrop />
           <PhotorealisticEarth />
           <RealisticOrbitalBeams nodePositions={ISLAND_3D_COORDS} />
+
+          {/* Real Distant Solar System Planets (Click planet or its orbit to fly right up close!) */}
+          <SolarSystemPlanets
+            onSelectPlanet={(name) => {
+              setSelectedPlanetName(name);
+              setViewMode('earth');
+            }}
+            selectedPlanetName={selectedPlanetName}
+            isSolarMode={viewMode === 'solarsystem'}
+            planetPositionsRef={planetPositionsRef}
+          />
 
           {/* Realistic 3D Satellites orbiting Earth with Solar Panels & HUD tags */}
           {TECH_NODES_OVERLAY.map((node) => {
@@ -235,13 +631,92 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
                 node={node}
                 pos={pos}
                 isSelected={selectedNode?.id === node.id}
-                onSelect={onSelectNode}
+                onSelect={(n) => {
+                  setSelectedPlanetName(null);
+                  onSelectNode(n);
+                }}
               />
             );
           })}
 
         </Suspense>
       </Canvas>
+
+      {/* Floating Celestial Navigation Control Bar */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-auto flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-full bg-[#050d1d]/90 backdrop-blur-md border border-slate-700/60 shadow-[0_10px_35px_rgba(0,0,0,0.85)] text-xs max-w-[95vw]">
+        <button
+          onClick={() => {
+            setSelectedPlanetName(null);
+            setViewMode('earth');
+          }}
+          className={`px-3 py-1.5 rounded-full font-semibold transition-all cursor-pointer ${
+            viewMode === 'earth' && !selectedPlanetName
+              ? 'bg-cyan-500 text-black shadow-[0_0_18px_rgba(56,189,248,0.8)] scale-105'
+              : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+          }`}
+        >
+          🌍 Earth
+        </button>
+        <button
+          onClick={() => {
+            setSelectedPlanetName(null);
+            setViewMode('solarsystem');
+          }}
+          className={`px-3 py-1.5 rounded-full font-semibold transition-all cursor-pointer ${
+            viewMode === 'solarsystem' && !selectedPlanetName
+              ? 'bg-amber-400 text-black shadow-[0_0_18px_rgba(251,191,36,0.8)] scale-105'
+              : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+          }`}
+        >
+          🪐 Solar System
+        </button>
+
+        {/* Quick-Jump Planet Selectors for seamless navigation between planets */}
+        <div className="flex items-center gap-1 pl-1.5 border-l border-slate-700/80">
+          {(['Sun', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune'] as const).map((pName) => {
+            const isCurrent = selectedPlanetName === pName;
+            return (
+              <button
+                key={pName}
+                onClick={() => {
+                  setSelectedPlanetName(pName);
+                  setViewMode('earth');
+                }}
+                className={`px-2 py-1 rounded-full text-[11px] font-medium transition-all cursor-pointer ${
+                  isCurrent
+                    ? pName === 'Sun'
+                      ? 'bg-amber-400 text-black font-bold shadow-[0_0_14px_rgba(251,191,36,0.95)] scale-105'
+                      : 'bg-cyan-400 text-black font-bold shadow-[0_0_12px_rgba(56,189,248,0.9)] scale-105'
+                    : 'text-slate-400 hover:text-amber-300 hover:bg-slate-800/50'
+                }`}
+              >
+                {pName === 'Sun' && '☀️ '}
+                {pName === 'Mercury' && '☿ '}
+                {pName === 'Venus' && '♀ '}
+                {pName === 'Mars' && '♂ '}
+                {pName === 'Jupiter' && '♃ '}
+                {pName === 'Saturn' && '♄ '}
+                {pName === 'Uranus' && '♅ '}
+                {pName === 'Neptune' && '♆ '}
+                {pName}
+              </button>
+            );
+          })}
+        </div>
+
+        {selectedPlanetName && (
+          <button
+            onClick={() => {
+              setSelectedPlanetName(null);
+              setViewMode('solarsystem');
+            }}
+            className="text-slate-400 hover:text-rose-400 ml-1 text-xs font-bold cursor-pointer transition-colors px-1"
+            title="Return to Solar System Overview"
+          >
+            ✕ Close
+          </button>
+        )}
+      </div>
     </div>
   );
 };
