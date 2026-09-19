@@ -603,6 +603,8 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
   const [selectedPlanetName, setSelectedPlanetName] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'earth' | 'solarsystem'>('earth');
 
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   return (
     <div className="absolute inset-0 w-full h-full pointer-events-auto cursor-grab active:cursor-grabbing">
       <Canvas
@@ -672,8 +674,113 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
         </Suspense>
       </Canvas>
 
-      {/* Floating Celestial Navigation Control Bar */}
-      <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-auto flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-full bg-[#050d1d]/90 backdrop-blur-md border border-slate-700/60 shadow-[0_10px_35px_rgba(0,0,0,0.85)] text-xs max-w-[92vw] sm:max-w-max overflow-x-auto no-scrollbar whitespace-nowrap">
+      {/* MOBILE-ONLY SIDE FLOATING FAB & EXPANDABLE VERTICAL MENU */}
+      <div className="sm:hidden absolute top-20 left-4 z-40 pointer-events-auto flex flex-col items-start gap-2">
+        {/* Toggle FAB Button */}
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#050d1d]/95 border border-cyan-500/50 shadow-[0_0_20px_rgba(56,189,248,0.4)] text-xs font-semibold text-cyan-300 backdrop-blur-xl cursor-pointer transition-all active:scale-95"
+        >
+          <span className="text-base">{isMobileMenuOpen ? '✕' : '🪐'}</span>
+          <span>{isMobileMenuOpen ? 'Close Menu' : (selectedPlanetName || (viewMode === 'earth' ? 'Earth' : 'Solar System'))}</span>
+          <span className="text-[10px] text-cyan-400">▼</span>
+        </button>
+
+        {/* Expandable Collapsible Side Drawer */}
+        {isMobileMenuOpen && (
+          <div className="flex flex-col gap-1.5 p-2.5 rounded-2xl bg-[#030914]/95 border border-slate-700/80 shadow-[0_15px_40px_rgba(0,0,0,0.9)] backdrop-blur-2xl text-xs max-h-[60vh] overflow-y-auto no-scrollbar w-44 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="text-[10px] uppercase font-bold tracking-widest text-slate-400 px-2 py-1 border-b border-slate-800 flex items-center justify-between">
+              <span>Explore Views</span>
+            </div>
+
+            <button
+              onClick={() => {
+                setSelectedPlanetName(null);
+                setViewMode('earth');
+                setIsMobileMenuOpen(false);
+              }}
+              className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl font-semibold transition-all cursor-pointer text-left ${
+                viewMode === 'earth' && !selectedPlanetName
+                  ? 'bg-cyan-500 text-black shadow-[0_0_15px_rgba(56,189,248,0.8)]'
+                  : 'text-slate-200 hover:bg-slate-800/60'
+              }`}
+            >
+              <span>🌍</span>
+              <span>Earth View</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setSelectedPlanetName(null);
+                setViewMode('solarsystem');
+                setIsMobileMenuOpen(false);
+              }}
+              className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl font-semibold transition-all cursor-pointer text-left ${
+                viewMode === 'solarsystem' && !selectedPlanetName
+                  ? 'bg-amber-400 text-black shadow-[0_0_15px_rgba(251,191,36,0.8)]'
+                  : 'text-slate-200 hover:bg-slate-800/60'
+              }`}
+            >
+              <span>🪐</span>
+              <span>Solar System</span>
+            </button>
+
+            <div className="text-[10px] uppercase font-bold tracking-widest text-slate-400 px-2 pt-2 pb-1 border-t border-slate-800">
+              Select Planet
+            </div>
+
+            {(['Sun', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune'] as const).map((pName) => {
+              const isCurrent = selectedPlanetName === pName;
+              return (
+                <button
+                  key={pName}
+                  onClick={() => {
+                    setSelectedPlanetName(pName);
+                    setViewMode('earth');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer text-left ${
+                    isCurrent
+                      ? pName === 'Sun'
+                        ? 'bg-amber-400 text-black font-bold shadow-[0_0_12px_rgba(251,191,36,0.9)]'
+                        : 'bg-cyan-400 text-black font-bold shadow-[0_0_12px_rgba(56,189,248,0.9)]'
+                      : 'text-slate-300 hover:bg-slate-800/50 hover:text-amber-300'
+                  }`}
+                >
+                  <span>
+                    {pName === 'Sun' && '☀️'}
+                    {pName === 'Mercury' && '☿'}
+                    {pName === 'Venus' && '♀'}
+                    {pName === 'Mars' && '♂'}
+                    {pName === 'Jupiter' && '♃'}
+                    {pName === 'Saturn' && '♄'}
+                    {pName === 'Uranus' && '♅'}
+                    {pName === 'Neptune' && '♆'}
+                  </span>
+                  <span>{pName}</span>
+                </button>
+              );
+            })}
+
+            <div className="pt-1 border-t border-slate-800">
+              <button
+                onClick={() => {
+                  const event = new CustomEvent('toggle-ai-assistant');
+                  window.dispatchEvent(event);
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-cyan-950/90 border border-cyan-400/60 text-cyan-300 font-semibold shadow-[0_0_12px_rgba(56,189,248,0.5)] transition-all cursor-pointer"
+              >
+                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                <span>Ask Intelligence</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* DESKTOP-ONLY FLOATING BOTTOM BAR (sm:flex) */}
+      <div className="hidden sm:flex absolute bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-auto items-center gap-2 px-4 py-2 rounded-full bg-[#050d1d]/90 backdrop-blur-md border border-slate-700/60 shadow-[0_10px_35px_rgba(0,0,0,0.85)] text-xs max-w-max">
         <button
           onClick={() => {
             setSelectedPlanetName(null);
