@@ -75,8 +75,11 @@ const TexturedMoonMesh: React.FC<{ moon: MoonData }> = ({ moon }) => {
           vec4 dayColor = texture2D(dayTexture, vUv);
           vec4 nightTexColor = texture2D(nightTexture, vUv);
 
-          float dayLighting = clamp(NdotL * 0.45 + 0.65, 0.55, 1.15);
+          float dayLighting = clamp(NdotL * 0.8 + 1.2, 0.5, 2.2);
           vec3 daySide = dayColor.rgb * dayLighting;
+          // Add a stark white exposure boost where the sun hits directly
+          daySide += vec3(0.35, 0.35, 0.35) * pow(max(0.0, NdotL), 1.5);
+          
           vec3 nightSide = hasNightTex ? nightTexColor.rgb : (dayColor.rgb * 0.08 + vec3(0.01, 0.02, 0.04));
 
           float twilight = clamp(1.0 - abs(NdotL) * 3.0, 0.0, 1.0);

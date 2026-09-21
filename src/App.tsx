@@ -56,6 +56,14 @@ export function App() {
     showNames: true,
   });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isNodePanelOpen, setIsNodePanelOpen] = useState(false);
+
+  // Close the panel by default when a new node is selected
+  useEffect(() => {
+    if (selectedNode) {
+      setIsNodePanelOpen(false);
+    }
+  }, [selectedNode]);
 
   // Keyboard shortcut '/'
   useEffect(() => {
@@ -336,7 +344,20 @@ export function App() {
       </button>
 
       {/* 6. CATEGORY DETAIL DRAWER */}
-      {selectedNode && (
+      {selectedNode && !isNodePanelOpen && (
+        <button
+          onClick={() => setIsNodePanelOpen(true)}
+          className="fixed right-0 top-1/2 -translate-y-1/2 z-40 bg-[#070e1c]/95 border-y border-l border-cyan-500/50 text-cyan-300 font-semibold px-2 py-4 rounded-l-xl shadow-[0_0_20px_rgba(56,189,248,0.4)] hover:bg-[#0f1f3d] transition-all cursor-pointer flex flex-col items-center gap-2 pointer-events-auto group"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+          <span style={{ writingMode: 'vertical-rl' }} className="tracking-widest text-xs">
+            DATA LINK
+          </span>
+          <span className="text-xs group-hover:-translate-x-1 transition-transform">◀</span>
+        </button>
+      )}
+
+      {selectedNode && isNodePanelOpen && (
         <div className="fixed inset-y-0 right-0 z-50 w-full sm:max-w-lg bg-[#070e1c]/95 backdrop-blur-2xl border-l border-cyan-500/30 shadow-[0_0_60px_rgba(0,0,0,0.9)] flex flex-col animate-in slide-in-from-right duration-300 pointer-events-auto">
           <div className="p-6 border-b border-slate-800 flex items-start justify-between">
             <div className="space-y-1">
@@ -355,7 +376,7 @@ export function App() {
             </div>
 
             <button
-              onClick={() => setSelectedNode(null)}
+              onClick={() => setIsNodePanelOpen(false)}
               className="p-2 rounded-full text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />

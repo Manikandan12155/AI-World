@@ -6,26 +6,49 @@ function CanvasLoader() {
   const { progress } = useProgress();
   return (
     <Html center zIndexRange={[100, 0]}>
-      <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-[#030a16]/95 backdrop-blur-xl border border-cyan-500/40 shadow-[0_0_50px_rgba(56,189,248,0.4)] text-center min-w-[260px] pointer-events-none">
-        <div className="relative w-14 h-14 mb-4 flex items-center justify-center">
-          <div className="absolute inset-0 rounded-full border-2 border-cyan-500/20 border-t-cyan-400 animate-spin" />
-          <div className="w-8 h-8 rounded-full bg-cyan-400/20 animate-ping" />
-          <span className="text-cyan-400 font-bold text-xs font-['Space_Grotesk']">3D</span>
+      <div className="flex flex-col items-center justify-center p-10 rounded-3xl bg-[#010614]/90 backdrop-blur-2xl border border-cyan-500/30 shadow-[0_0_80px_rgba(6,182,212,0.25)] text-center w-[340px] pointer-events-none overflow-hidden relative">
+        {/* Animated background glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[150%] h-[150%] bg-cyan-600/10 blur-[80px] rounded-full pointer-events-none animate-pulse"></div>
+
+        {/* Dynamic 3D Cosmic Core Loader */}
+        <div className="relative w-24 h-24 mb-8 flex items-center justify-center">
+          {/* Outer rotating orbits */}
+          <div className="absolute inset-0 rounded-full border border-dashed border-cyan-400/40 animate-[spin_12s_linear_infinite]" />
+          <div className="absolute inset-1 rounded-full border-2 border-transparent border-t-cyan-400 border-l-cyan-500/40 animate-[spin_3s_linear_infinite]" />
+          <div className="absolute inset-3 rounded-full border-2 border-transparent border-b-blue-400 border-r-blue-500/40 animate-[spin_5s_linear_infinite_reverse]" />
+          
+          {/* Inner pulsating cosmic core */}
+          <div className="absolute w-10 h-10 rounded-full bg-cyan-400/30 animate-ping shadow-[0_0_40px_rgba(34,211,238,0.6)]" />
+          <div className="absolute w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-400 to-blue-600 shadow-[0_0_20px_rgba(34,211,238,1)]" />
+          <span className="absolute text-white font-black text-xs tracking-widest drop-shadow-[0_0_8px_rgba(255,255,255,0.9)]">3D</span>
         </div>
-        <div className="text-cyan-300 font-bold text-sm tracking-wider uppercase mb-1 font-['Space_Grotesk']">
-          Loading Universe
+
+        {/* Text Area */}
+        <h2 className="text-cyan-50 font-extrabold text-lg tracking-[0.2em] uppercase mb-1 font-['Space_Grotesk'] drop-shadow-[0_0_12px_rgba(34,211,238,0.6)] relative z-10">
+          Constructing Universe
+        </h2>
+        <div className="text-cyan-400/80 text-[11px] mb-8 font-medium tracking-[0.1em] uppercase animate-pulse relative z-10">
+          Synthesizing Galaxies & Matter...
         </div>
-        <div className="text-slate-400 text-xs mb-3 font-medium">
-          Initializing 3D Shaders & Textures...
-        </div>
-        <div className="w-full bg-slate-800/80 rounded-full h-2 p-0.5 overflow-hidden border border-slate-700">
-          <div
-            className="bg-gradient-to-r from-cyan-500 via-sky-400 to-blue-500 h-full rounded-full transition-all duration-300 shadow-[0_0_12px_rgba(56,189,248,0.8)]"
-            style={{ width: `${Math.max(5, Math.min(100, progress))}%` }}
-          />
-        </div>
-        <div className="text-cyan-400 font-mono text-[11px] mt-2 font-semibold">
-          {Math.round(progress)}%
+
+        {/* Progress Bar Container */}
+        <div className="w-full relative z-10">
+          <div className="w-full bg-slate-900/80 rounded-full h-1.5 overflow-hidden border border-slate-700/50">
+            <div
+              className="bg-gradient-to-r from-cyan-600 via-cyan-400 to-blue-500 h-full rounded-full transition-all duration-300 relative shadow-[0_0_15px_rgba(34,211,238,0.8)]"
+              style={{ width: `${Math.max(5, Math.min(100, progress))}%` }}
+            >
+              {/* Glowing tip of the progress bar */}
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full blur-[4px] opacity-90" />
+            </div>
+          </div>
+          
+          <div className="flex justify-between items-center mt-4 px-1">
+            <span className="text-[9px] text-slate-400/80 uppercase tracking-widest font-bold">Initialization</span>
+            <span className="text-cyan-300 font-mono text-xs font-bold tracking-wider drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]">
+              {progress.toFixed(1)}%
+            </span>
+          </div>
         </div>
       </div>
     </Html>
@@ -78,6 +101,8 @@ const SceneCameraController: React.FC<{
   const isTransitioningRef = useRef<boolean>(false);
   const lastTargetPosRef = useRef<THREE.Vector3 | null>(null);
 
+  const prevSelectedNodeRef = useRef<string | null>(null);
+
   // Trigger smooth one-time camera entry flight whenever a new planet is selected
   useMemo(() => {
     if (selectedPlanetName !== prevTargetPlanetRef.current) {
@@ -86,6 +111,17 @@ const SceneCameraController: React.FC<{
       lastTargetPosRef.current = null; // Reset tracking offset
     }
   }, [selectedPlanetName]);
+
+  // Trigger camera flight when a satellite node is selected
+  useMemo(() => {
+    if (selectedNode?.id !== prevSelectedNodeRef.current) {
+      prevSelectedNodeRef.current = selectedNode?.id || null;
+      if (selectedNode) {
+        isTransitioningRef.current = true;
+        lastTargetPosRef.current = null;
+      }
+    }
+  }, [selectedNode]);
 
   useFrame(({ camera }) => {
     if (controlsRef.current) {
@@ -190,7 +226,24 @@ const SceneCameraController: React.FC<{
         }
       } else if (selectedNode && ISLAND_3D_COORDS[selectedNode.id]) {
         const pos = ISLAND_3D_COORDS[selectedNode.id];
-        controlsRef.current.target.lerp(new THREE.Vector3(pos[0] * 0.6, pos[1] * 0.6, 0), 0.05);
+        const targetPos = new THREE.Vector3(pos[0], pos[1], pos[2]);
+        
+        const lerpSpeed = isTransitioningRef.current ? 0.1 : 0.05;
+        controlsRef.current.target.lerp(targetPos, lerpSpeed);
+
+        if (isTransitioningRef.current) {
+          const camOffset = camera.position.clone().sub(targetPos);
+          const viewDist = 1.8; // Up-close view for satellite
+          const currentDist = camOffset.length();
+          
+          if (Math.abs(currentDist - viewDist) > 0.05) {
+            if (currentDist < 0.1) camOffset.set(0, 0.5, 1);
+            const desiredCamPos = targetPos.clone().add(camOffset.normalize().multiplyScalar(viewDist));
+            camera.position.lerp(desiredCamPos, 0.1);
+          } else {
+            isTransitioningRef.current = false;
+          }
+        }
       } else {
         // Return smoothly to Earth center
         controlsRef.current.target.lerp(new THREE.Vector3(0.35, 0.05, 0), 0.04);
@@ -696,7 +749,7 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
   const [viewMode, setViewMode] = useState<'earth' | 'solarsystem'>('earth');
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeMenuTab, setActiveMenuTab] = useState<'planets' | 'moons' | 'dwarfs' | 'comets' | null>(null);
+  const [activeMenuTab, setActiveMenuTab] = useState<'planets' | 'moons' | 'dwarfs' | 'comets' | 'satellites' | null>(null);
 
   return (
     <div className="absolute inset-0 w-full h-full pointer-events-auto cursor-grab active:cursor-grabbing">
@@ -892,6 +945,31 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
             })}
 
             <div className="pt-1 border-t border-slate-800">
+              <div className="text-[9px] uppercase font-bold tracking-widest text-slate-500 mb-1 px-1">Satellites</div>
+              {universeSettings.showSatellites && TECH_NODES_OVERLAY.map((node) => {
+                const isCurrent = selectedNode?.id === node.id;
+                return (
+                  <button
+                    key={node.id}
+                    onClick={() => {
+                      setSelectedPlanetName(null);
+                      onSelectNode(node);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer text-left mb-0.5 ${
+                      isCurrent
+                        ? 'bg-cyan-400 text-black font-bold shadow-[0_0_12px_rgba(56,189,248,0.9)]'
+                        : 'text-slate-300 hover:bg-slate-800/50 hover:text-cyan-300'
+                    }`}
+                  >
+                    <span>🛰️</span>
+                    <span>{node.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="pt-1 border-t border-slate-800">
               <button
                 onClick={() => {
                   const event = new CustomEvent('toggle-ai-assistant');
@@ -1044,6 +1122,32 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
           </div>
         )}
 
+        {activeMenuTab === 'satellites' && (
+          <div className="flex flex-wrap items-center justify-center gap-1.5 p-3 rounded-2xl bg-[#030914]/95 border border-cyan-500/50 shadow-[0_15px_40px_rgba(0,0,0,0.9)] backdrop-blur-2xl text-xs max-w-md animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <div className="w-full text-[10px] uppercase font-bold tracking-widest text-cyan-400 pb-1 border-b border-slate-800 flex items-center justify-between">
+              <span>🛰️ Satellites</span>
+              <button onClick={() => setActiveMenuTab(null)} className="text-slate-400 hover:text-white px-1 font-mono">✕ Close</button>
+            </div>
+            {TECH_NODES_OVERLAY.map((sNode) => (
+              <button
+                key={sNode.id}
+                onClick={() => {
+                  setSelectedPlanetName(null);
+                  onSelectNode(sNode);
+                  setActiveMenuTab(null);
+                }}
+                className={`px-3 py-1 rounded-full text-[11px] font-medium transition-all cursor-pointer ${
+                  selectedNode?.id === sNode.id
+                    ? 'bg-sky-400 text-black font-bold shadow-[0_0_12px_rgba(56,189,248,0.9)] scale-105'
+                    : 'bg-slate-800/80 text-slate-200 hover:bg-cyan-950 hover:text-cyan-300 border border-slate-700/50'
+                }`}
+              >
+                🛰️ {sNode.name}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* MAIN CATEGORY NAVIGATION BAR */}
         <div className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-[#050d1d]/95 backdrop-blur-md border border-slate-700/80 shadow-[0_10px_35px_rgba(0,0,0,0.85)] text-xs flex-wrap justify-center">
           {/* Solar Overview Button */}
@@ -1136,6 +1240,21 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
               }`}
             >
               <span>☄️ Comets</span>
+              <span className="text-[9px]">▼</span>
+            </button>
+          )}
+
+          {/* Satellites Category Menu Toggle */}
+          {universeSettings.showSatellites && (
+            <button
+              onClick={() => setActiveMenuTab(activeMenuTab === 'satellites' ? null : 'satellites')}
+              className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1 border ${
+                activeMenuTab === 'satellites'
+                  ? 'bg-cyan-500 text-black border-cyan-400 shadow-[0_0_14px_rgba(56,189,248,0.8)]'
+                  : 'bg-slate-800/60 text-slate-300 hover:text-cyan-300 border-slate-700/60'
+              }`}
+            >
+              <span>🛰️ Satellites</span>
               <span className="text-[9px]">▼</span>
             </button>
           )}
