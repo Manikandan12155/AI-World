@@ -4300,26 +4300,26 @@ No matching component was found for:
           vec3 sunDir = normalize(sunPosition - vWorldPosition);
 
           float NdotL = dot(normal, sunDir);
-          float dayFactor = smoothstep(-0.05, 0.15, NdotL);
+          float dayFactor = smoothstep(-0.10, 0.18, NdotL);
 
           vec4 dayColor = texture2D(dayTexture, vUv);
 
-          // Rich crater contrast enhancement (deepens dark shadows, keeps surface details sharp)
+          // Contrast & Detail Enhancement to bring out craters and ice rifts
           vec3 baseTex = dayColor.rgb;
-          vec3 detailedTex = pow(baseTex, vec3(1.45)) * 1.15;
-          detailedTex = clamp(detailedTex, 0.0, 1.0);
+          vec3 highContrastTex = clamp((baseTex - 0.45) * 1.40 + 0.48, 0.0, 1.0);
+          highContrastTex = pow(highContrastTex, vec3(1.12));
 
-          vec4 nightColor = hasNightTex ? texture2D(nightTexture, vUv) : vec4(detailedTex * 0.02, 1.0);
+          vec4 nightColor = hasNightTex ? texture2D(nightTexture, vUv) : vec4(highContrastTex * 0.03, 1.0);
 
-          // Natural Lambertian Sunlight shading (0.05 ambient in shadow up to 1.0 direct sunlight)
-          float sunDiff = max(NdotL, 0.0);
-          float dayLighting = sunDiff * 0.92 + 0.08;
+          // Crisp Lambertian Sunlight incidence shading with rich shadow depth
+          float sunDiff = clamp(NdotL, 0.0, 1.0);
+          float dayLighting = clamp(pow(sunDiff, 0.82) * 1.15 + 0.06, 0.04, 1.18);
 
-          vec3 daySide = detailedTex * dayLighting;
+          vec3 daySide = highContrastTex * dayLighting;
           vec3 nightSide = nightColor.rgb;
 
-          float twilight = clamp(1.0 - abs(NdotL) * 4.0, 0.0, 1.0);
-          vec3 twilightGlow = detailedTex * twilight * 0.10;
+          float twilight = clamp(1.0 - abs(NdotL) * 3.5, 0.0, 1.0);
+          vec3 twilightGlow = highContrastTex * twilight * 0.14;
 
           vec3 finalColor = mix(nightSide, daySide, dayFactor) + twilightGlow;
           gl_FragColor = vec4(finalColor, 1.0);
@@ -4346,18 +4346,19 @@ No matching component was found for:
           vec3 sunDir = normalize(sunPosition - vWorldPosition);
 
           float NdotL = dot(normal, sunDir);
-          float dayFactor = smoothstep(-0.05, 0.15, NdotL);
+          float dayFactor = smoothstep(-0.16, 0.20, NdotL);
 
-          float sunDiff = max(NdotL, 0.0);
-          float dayLighting = sunDiff * 0.90 + 0.10;
+          float dayLighting = clamp(NdotL * 0.50 + 0.65, 0.08, 1.12);
+          vec3 daySide = moonColor * dayLighting;
+          vec3 nightSide = moonColor * 0.04;
 
-          vec3 daySide = moonColor * dayLighting * 0.65;
-          vec3 nightSide = moonColor * 0.02;
+          float twilight = clamp(1.0 - abs(NdotL) * 3.2, 0.0, 1.0);
+          vec3 twilightGlow = moonColor * twilight * 0.12;
 
-          vec3 finalColor = mix(nightSide, daySide, dayFactor);
+          vec3 finalColor = mix(nightSide, daySide, dayFactor) + twilightGlow;
           gl_FragColor = vec4(finalColor, 1.0);
         }
-      `}),[e.color]);return pv((e,n)=>{t.current&&(t.current.rotation.y+=n*.02)}),(0,$.jsx)(`mesh`,{ref:t,material:n,children:(0,$.jsx)(`sphereGeometry`,{args:[e.size,32,32]})})},wb=({moon:e,isFocused:t})=>{let n=(0,v.useRef)(null);return pv((t,r)=>{n.current&&(n.current.rotation.y+=r*e.speed)}),(0,$.jsxs)(`group`,{ref:n,rotation:[0,0,0],children:[t&&(0,$.jsxs)(`mesh`,{rotation:[Math.PI/2,0,0],children:[(0,$.jsx)(`ringGeometry`,{args:[e.radiusOffset-.015,e.radiusOffset+.015,64]}),(0,$.jsx)(`meshBasicMaterial`,{color:e.color,transparent:!0,opacity:.35,side:2,blending:2})]}),(0,$.jsxs)(`group`,{position:[e.radiusOffset,0,0],children:[e.dayTexture?(0,$.jsx)(Sb,{moon:e}):(0,$.jsx)(Cb,{moon:e}),t&&(0,$.jsx)($y,{position:[0,e.size+.25,0],center:!0,distanceFactor:10,className:`pointer-events-none select-none whitespace-nowrap`,children:(0,$.jsxs)(`div`,{className:`flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#050c1a]/90 backdrop-blur-md border border-cyan-400/60 shadow-[0_0_12px_rgba(56,189,248,0.5)] text-[9px] text-slate-100 font-semibold font-['Space_Grotesk']`,children:[(0,$.jsx)(`span`,{className:`w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse`}),(0,$.jsx)(`span`,{children:e.name})]})})]})]})},Tb=({count:e,baseRadius:t})=>{let n=(0,v.useRef)(null),r=(0,v.useMemo)(()=>new pi,[]),[i]=_v(Ju,[yb(`/textures/Autonomous_Moon_Texture.jpg`)]);(0,v.useMemo)(()=>{i&&(i.colorSpace=Xt,i.minFilter=V)},[i]);let a=(0,v.useMemo)(()=>new Yl({uniforms:{dayTexture:{value:i},sunPosition:{value:xb}},vertexShader:`
+      `}),[e.color]);return pv((e,n)=>{t.current&&(t.current.rotation.y+=n*.02)}),(0,$.jsx)(`mesh`,{ref:t,material:n,children:(0,$.jsx)(`sphereGeometry`,{args:[e.size,32,32]})})},wb=({moon:e,isFocused:t})=>{let n=(0,v.useRef)(null);return pv((t,r)=>{n.current&&(n.current.rotation.y+=r*e.speed)}),(0,$.jsxs)(`group`,{ref:n,rotation:[0,0,0],children:[t&&(0,$.jsxs)(`mesh`,{rotation:[Math.PI/2,0,0],children:[(0,$.jsx)(`ringGeometry`,{args:[e.radiusOffset-.015,e.radiusOffset+.015,64]}),(0,$.jsx)(`meshBasicMaterial`,{color:e.color,transparent:!0,opacity:.35,side:2,blending:2})]}),(0,$.jsxs)(`group`,{position:[e.radiusOffset,0,0],children:[e.dayTexture?(0,$.jsx)(Sb,{moon:e}):(0,$.jsx)(Cb,{moon:e}),(0,$.jsxs)(`mesh`,{scale:1.15,children:[(0,$.jsx)(`sphereGeometry`,{args:[e.size,16,16]}),(0,$.jsx)(`meshBasicMaterial`,{color:e.color,transparent:!0,opacity:.15,side:1,blending:2})]}),t&&(0,$.jsx)($y,{position:[0,e.size+.25,0],center:!0,distanceFactor:10,className:`pointer-events-none select-none whitespace-nowrap`,children:(0,$.jsxs)(`div`,{className:`flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#050c1a]/90 backdrop-blur-md border border-cyan-400/60 shadow-[0_0_12px_rgba(56,189,248,0.5)] text-[9px] text-slate-100 font-semibold font-['Space_Grotesk']`,children:[(0,$.jsx)(`span`,{className:`w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse`}),(0,$.jsx)(`span`,{children:e.name})]})})]})]})},Tb=({count:e,baseRadius:t})=>{let n=(0,v.useRef)(null),r=(0,v.useMemo)(()=>new pi,[]),[i]=_v(Ju,[yb(`/textures/Autonomous_Moon_Texture.jpg`)]);(0,v.useMemo)(()=>{i&&(i.colorSpace=Xt,i.minFilter=V)},[i]);let a=(0,v.useMemo)(()=>new Yl({uniforms:{dayTexture:{value:i},sunPosition:{value:xb}},vertexShader:`
         varying vec2 vUv;
         varying vec3 vNormal;
         varying vec3 vWorldPosition;
