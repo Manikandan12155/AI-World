@@ -22,7 +22,6 @@ const SmoothSunCorona: React.FC = () => {
         transparent
         blending={THREE.AdditiveBlending}
         depthWrite={false}
-        depthTest={false} // Prevents any weird clipping lines
         vertexShader={`
           varying vec2 vUv;
           void main() {
@@ -102,10 +101,11 @@ export const CinematicSpaceBackdrop: React.FC = () => {
   const sunMeshRef = useRef<THREE.Group>(null);
   const milkyWayMaterialRef = useRef<THREE.ShaderMaterial>(null);
 
-  // Load Photorealistic Sun Surface & Soft Solar Spark Texture
-  const [sunSurfaceTexture, sparkTexture] = useLoader(THREE.TextureLoader, [
+  // Load Photorealistic Sun Surface, Soft Solar Spark Texture & Space Background
+  const [sunSurfaceTexture, sparkTexture, spaceTexture] = useLoader(THREE.TextureLoader, [
     getAssetUrl('/textures/sun_photorealistic.jpg'),
     getAssetUrl('/textures/solar_spark.jpg'),
+    getAssetUrl('/textures/milkyway_equirectangular_360.jpg')
   ]);
 
   useMemo(() => {
@@ -117,7 +117,10 @@ export const CinematicSpaceBackdrop: React.FC = () => {
     if (sparkTexture) {
       sparkTexture.colorSpace = THREE.SRGBColorSpace;
     }
-  }, [sunSurfaceTexture, sparkTexture]);
+    if (spaceTexture) {
+      spaceTexture.colorSpace = THREE.SRGBColorSpace;
+    }
+  }, [sunSurfaceTexture, sparkTexture, spaceTexture]);
 
   // Orbit, Sun spin & Camera-following infinite Skybox animations
   useFrame(({ clock, camera }, delta) => {
@@ -155,29 +158,14 @@ export const CinematicSpaceBackdrop: React.FC = () => {
 
   return (
     <group>
-      {/* 1. Deep Void Sky-Sphere (Replaces the flat banner texture) */}
-      <mesh ref={skysphereRef} rotation={[0, 0, 0]}>
+      {/* 1. Zoomed-out 360-degree Celestial Sky-Sphere */}
+      <mesh ref={skysphereRef} rotation={[0, -Math.PI * 0.5, 0]}>
         <sphereGeometry args={[160, 64, 64]} />
-        <shaderMaterial
+        <meshBasicMaterial
+          map={spaceTexture}
           side={THREE.BackSide}
+          toneMapped={false}
           depthWrite={false}
-          vertexShader={`
-            varying vec3 vWorldPosition;
-            void main() {
-              vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-              vWorldPosition = worldPosition.xyz;
-              gl_Position = projectionMatrix * viewMatrix * worldPosition;
-            }
-          `}
-          fragmentShader={`
-            varying vec3 vWorldPosition;
-            void main() {
-              vec3 dir = normalize(vWorldPosition);
-              // Create a very subtle deep space color gradient
-              vec3 color = mix(vec3(0.002, 0.005, 0.015), vec3(0.001, 0.002, 0.005), abs(dir.y));
-              gl_FragColor = vec4(color, 1.0);
-            }
-          `}
         />
       </mesh>
 
