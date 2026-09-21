@@ -1,7 +1,166 @@
-import { useRef, useMemo } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { useLoader, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { getAssetUrl } from '../utils/assetPath';
+
+// Photorealistic Hair-like Solar Flare Prominences & Wispy Ray Filaments (Matching Reference Image 1:1)
+const SolarHairFlamesProminences: React.FC = () => {
+  const groupRef = useRef<THREE.Group>(null);
+  const flareCount = 60; // 60 fine hair-like solar flame tendrils sprouting around Sun limb
+
+  // Generate hair-like organic curved filament lines radiating outward from Sun limb
+  const hairFilaments = useMemo(() => {
+    const filaments: THREE.Line[] = [];
+    const sunRadius = 4.5;
+
+    for (let i = 0; i < flareCount; i++) {
+      const angle = (i / flareCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.1;
+      const phi = (Math.random() - 0.5) * Math.PI * 0.8; // Spread across equator & poles
+
+      const dirX = Math.cos(angle) * Math.cos(phi);
+      const dirY = Math.sin(angle) * Math.cos(phi);
+      const dirZ = Math.sin(phi);
+
+      const basePos = new THREE.Vector3(dirX * sunRadius, dirY * sunRadius, dirZ * sunRadius);
+      const normal = basePos.clone().normalize();
+
+      // Create hair-like wavy curve extending into space
+      const points: THREE.Vector3[] = [];
+      const segments = 24;
+      const height = 0.8 + Math.random() * 2.8; // Length of hair-like flame stream
+      const curveFactor = (Math.random() - 0.5) * 1.4;
+
+      for (let j = 0; j <= segments; j++) {
+        const t = j / segments;
+        const dist = sunRadius + t * height;
+
+        // Tangent deflection for hair-like curl/loop curvature
+        const wave = Math.sin(t * Math.PI * 2.5 + i) * 0.25 * t;
+        const sideOffset = new THREE.Vector3(-normal.y, normal.x, 0).multiplyScalar(wave + t * curveFactor * 0.6);
+
+        const p = normal.clone().multiplyScalar(dist).add(sideOffset);
+        points.push(p);
+      }
+
+      const geo = new THREE.BufferGeometry().setFromPoints(points);
+      const mat = new THREE.LineBasicMaterial({
+        color: new THREE.Color(i % 3 === 0 ? '#ffea70' : i % 2 === 0 ? '#ff7700' : '#ff3300'),
+        transparent: true,
+        opacity: 0.65 + Math.random() * 0.3,
+        blending: THREE.AdditiveBlending,
+      });
+
+      filaments.push(new THREE.Line(geo, mat));
+    }
+
+    return filaments;
+  }, [flareCount]);
+
+  // Animate wispy hair-like flame movement & slow solar rotation
+  useFrame(({ clock }, delta) => {
+    const time = clock.getElapsedTime();
+    if (groupRef.current) {
+      groupRef.current.rotation.y += delta * 0.02;
+      groupRef.current.rotation.z = Math.sin(time * 0.4) * 0.08;
+    }
+  });
+
+  return (
+    <group ref={groupRef}>
+      {hairFilaments.map((line, idx) => (
+        <primitive key={idx} object={line} />
+      ))}
+    </group>
+  );
+};
+
+// Dynamic 3D Solar Fire Plasma Sparks Emitter (Radiating soft glowing fire sparks & embers from Sun surface)
+const SolarFireSparksEmitter: React.FC<{ sparkTexture?: THREE.Texture }> = ({ sparkTexture }) => {
+  const pointsRef = useRef<THREE.Points>(null);
+  const particleCount = 220;
+
+  // Generate initial positions, directions, speeds and sizes for 220 kutty fire sparks
+  const [positions, initialDirections, speeds] = useMemo(() => {
+    const posArr = new Float32Array(particleCount * 3);
+    const dirs: THREE.Vector3[] = [];
+    const spds: number[] = [];
+
+    for (let i = 0; i < particleCount; i++) {
+      const u = Math.random();
+      const v = Math.random();
+      const theta = u * 2.0 * Math.PI;
+      const phi = Math.acos(2.0 * v - 1.0);
+
+      const dirX = Math.sin(phi) * Math.cos(theta);
+      const dirY = Math.sin(phi) * Math.sin(theta);
+      const dirZ = Math.cos(phi);
+
+      const dirVec = new THREE.Vector3(dirX, dirY, dirZ).normalize();
+      dirs.push(dirVec);
+
+      const dist = 4.52 + Math.random() * 2.2;
+      posArr[i * 3] = dirVec.x * dist;
+      posArr[i * 3 + 1] = dirVec.y * dist;
+      posArr[i * 3 + 2] = dirVec.z * dist;
+
+      spds.push(0.018 + Math.random() * 0.042);
+    }
+
+    return [posArr, dirs, spds];
+  }, [particleCount]);
+
+  useFrame((_, delta) => {
+    if (!pointsRef.current) return;
+    const geo = pointsRef.current.geometry;
+    const posAttr = geo.attributes.position as THREE.BufferAttribute;
+
+    for (let i = 0; i < particleCount; i++) {
+      let x = posAttr.getX(i);
+      let y = posAttr.getY(i);
+      let z = posAttr.getZ(i);
+
+      const dir = initialDirections[i];
+      const speed = speeds[i];
+
+      x += dir.x * speed * (delta * 60);
+      y += dir.y * speed * (delta * 60);
+      z += dir.z * speed * (delta * 60);
+
+      const currentDist = Math.sqrt(x * x + y * y + z * z);
+
+      if (currentDist > 7.8) {
+        const newDist = 4.52 + Math.random() * 0.2;
+        x = dir.x * newDist;
+        y = dir.y * newDist;
+        z = dir.z * newDist;
+      }
+
+      posAttr.setXYZ(i, x, y, z);
+    }
+
+    posAttr.needsUpdate = true;
+  });
+
+  return (
+    <points ref={pointsRef}>
+      <bufferGeometry>
+        <bufferAttribute
+          attach="attributes-position"
+          args={[positions, 3]}
+        />
+      </bufferGeometry>
+      <pointsMaterial
+        size={0.45}
+        map={sparkTexture}
+        color="#ffaa00"
+        transparent
+        opacity={0.85}
+        blending={THREE.AdditiveBlending}
+        depthWrite={false}
+      />
+    </points>
+  );
+};
 
 export const CinematicSpaceBackdrop: React.FC = () => {
   const skysphereRef = useRef<THREE.Mesh>(null);
@@ -9,92 +168,28 @@ export const CinematicSpaceBackdrop: React.FC = () => {
   const moonRef = useRef<THREE.Group>(null);
   const sunMeshRef = useRef<THREE.Group>(null);
 
-  // Load 360-degree Equirectangular Cosmic Texture and Photorealistic Sun Surface
-  const [spaceTexture, sunSurfaceTexture] = useLoader(THREE.TextureLoader, [
+  // Load 360-degree Equirectangular Cosmic Texture, Photorealistic Sun Surface & Soft Solar Spark Texture
+  const [spaceTexture, sunSurfaceTexture, sparkTexture] = useLoader(THREE.TextureLoader, [
     getAssetUrl('/textures/milkyway_equirectangular_360.jpg'),
-    getAssetUrl('/textures/sun_photorealistic.jpg')
+    getAssetUrl('/textures/sun_photorealistic.jpg'),
+    getAssetUrl('/textures/solar_spark.jpg'),
   ]);
 
   useMemo(() => {
-    if (sunSurfaceTexture) sunSurfaceTexture.colorSpace = THREE.SRGBColorSpace;
-  }, [sunSurfaceTexture]);
-
-  // Organic Non-Circular Wavy Plasma Corona Shader ("Valanchi Valanji" Continuous Contour + "Vittu Vittu" Periodic Flare Bursts)
-  const sunWavyCoronaShaderMaterial = useMemo(() => {
-    return new THREE.ShaderMaterial({
-      uniforms: {
-        uTime: { value: 0 },
-      },
-      vertexShader: `
-        varying vec3 vNormal;
-        varying vec3 vWorldPosition;
-        varying vec3 vLocalPosition;
-        uniform float uTime;
-
-        void main() {
-          vLocalPosition = position;
-          vNormal = normalize(normalMatrix * normal);
-
-          // ALWAYS-OUTSIDE Wavy Organic Plasma Displacement (Valanchi Valanji Contour, NEVER clips inside Sun!)
-          vec3 pos = position;
-          float w1 = sin(pos.x * 1.4 + pos.y * 1.8 + uTime * 2.5);
-          float w2 = cos(pos.y * 2.0 + pos.z * 1.5 - uTime * 3.0);
-          float w3 = sin((pos.x + pos.z) * 2.2 + uTime * 3.5);
-
-          // Strictly positive offset (+ 0.32) so wavy flares stay 100% outside the Sun sphere on ALL sides!
-          float displacement = ((w1 * w2 + w3) * 0.5 + 0.5) * 0.38 + 0.08;
-          pos += normal * displacement;
-
-          vec4 worldPos = modelMatrix * vec4(pos, 1.0);
-          vWorldPosition = worldPos.xyz;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
-        }
-      `,
-      fragmentShader: `
-        uniform float uTime;
-        varying vec3 vNormal;
-        varying vec3 vWorldPosition;
-        varying vec3 vLocalPosition;
-
-        void main() {
-          vec3 normal = normalize(vNormal);
-          vec3 viewDir = normalize(cameraPosition - vWorldPosition);
-
-          // PERIODIC FLARE BURST (Vittu Vittu Varum Periodic Flare Pulse)
-          float burstCycle = sin(uTime * 2.0) * 0.5 + 0.5;
-          float flareBurst = pow(burstCycle, 2.2);
-
-          // Organic plasma texture ripple
-          float r = length(vLocalPosition);
-          float plasmaRipple = sin(r * 3.5 - uTime * 3.2 + sin(vLocalPosition.x * 2.2) * 0.8) * 0.5 + 0.5;
-
-          // Smooth Fresnel edge rim glow
-          float NdotV = max(dot(viewDir, normal), 0.0);
-          float fresnel = pow(1.0 - NdotV, 1.4);
-
-          // Dynamic colors: fiery red/orange flare to incandescent gold burst
-          vec3 baseColor = mix(vec3(1.0, 0.15, 0.0), vec3(1.0, 0.55, 0.05), plasmaRipple);
-          vec3 burstColor = mix(baseColor, vec3(1.0, 0.90, 0.25), flareBurst);
-
-          // Edge alpha modulation
-          float alpha = (0.4 + 0.6 * flareBurst) * fresnel * 0.88;
-
-          gl_FragColor = vec4(burstColor, alpha);
-        }
-      `,
-      transparent: true,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    });
-  }, []);
+    if (sunSurfaceTexture) {
+      sunSurfaceTexture.colorSpace = THREE.SRGBColorSpace;
+      sunSurfaceTexture.wrapS = THREE.RepeatWrapping;
+      sunSurfaceTexture.wrapT = THREE.RepeatWrapping;
+    }
+    if (sparkTexture) {
+      sparkTexture.colorSpace = THREE.SRGBColorSpace;
+    }
+  }, [sunSurfaceTexture, sparkTexture]);
 
   // Orbit, Sun spin & Camera-following infinite Skybox animations
   useFrame(({ clock, camera }, delta) => {
     const time = clock.getElapsedTime();
 
-    // INFINITE DEEP SPACE BACKDROP PRINCIPLE:
-    // Sky-sphere MUST follow camera.position so space background is always infinitely distant!
-    // When visiting Saturn, Uranus, or Neptune, background scale remains 100% perfect & sharp!
     if (skysphereRef.current) {
       skysphereRef.current.position.copy(camera.position);
     }
@@ -102,15 +197,12 @@ export const CinematicSpaceBackdrop: React.FC = () => {
       starfieldRef.current.position.copy(camera.position);
     }
 
-    // Update GLSL Wavy Corona Shader time uniform
-    sunWavyCoronaShaderMaterial.uniforms.uTime.value = time;
-
     // Sun axis spin animation
     if (sunMeshRef.current) {
       sunMeshRef.current.rotation.y += delta * 0.04;
     }
 
-    // Moon orbit around Earth (realistic tilted elliptic orbit)
+    // Moon orbit around Earth
     if (moonRef.current) {
       const t = time * 0.12;
       moonRef.current.position.x = 0.4 + Math.cos(t) * 6.2;
@@ -156,9 +248,9 @@ export const CinematicSpaceBackdrop: React.FC = () => {
         <pointsMaterial size={0.04} color="#e0f2fe" transparent opacity={0.65} />
       </points>
 
-      {/* 3. THE SUN (3D Incandescent Golden Solar Sphere + Organic Non-Circular Wavy Atmosphere + Periodic Flare Bursts) */}
+      {/* 3. THE PHOTOREALISTIC SUN (Sphere Surface + Hair-like Solar Flame Filaments 1:1 + Emitting Fire Sparks) */}
       <group position={sunPosition}>
-        {/* 3D Photorealistic Sun Ball Mesh */}
+        {/* 3D Photorealistic Fiery Sun Ball Mesh */}
         <group ref={sunMeshRef}>
           <mesh>
             <sphereGeometry args={[4.5, 64, 64]} />
@@ -170,14 +262,14 @@ export const CinematicSpaceBackdrop: React.FC = () => {
           </mesh>
         </group>
 
-        {/* 1. High-Resolution Organic Wavy Plasma Corona Shell (Always Outside Sun Sphere, No Clipping!) */}
-        <mesh>
-          <sphereGeometry args={[4.52, 96, 96]} />
-          <primitive object={sunWavyCoronaShaderMaterial} attach="material" />
-        </mesh>
+        {/* 1:1 Hair-like Wispy Solar Flame Prominences & Ray Filaments */}
+        <SolarHairFlamesProminences />
 
-        {/* High-power radiating solar light illuminating Earth and Moon from deep space */}
-        <pointLight color="#fff7e6" intensity={7} distance={250} decay={0.3} />
+        {/* Kutty Kutty Erupting Fire Sparks & Embers Radiating Outward into Space */}
+        <SolarFireSparksEmitter sparkTexture={sparkTexture} />
+
+        {/* High-power radiating solar light illuminating planets from deep space */}
+        <pointLight color="#fff7e6" intensity={8.0} distance={280} decay={0.3} />
       </group>
 
       {/* 4. Powerful Direct Sunlight shining directly from the Sun */}

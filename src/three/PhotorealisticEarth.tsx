@@ -9,7 +9,10 @@ export const EARTH_SUN_POSITION = new THREE.Vector3(26, 14, 14);
 
 import { PlanetMoons3DGroup } from './PlanetMoons3DGroup';
 
-export const PhotorealisticEarth: React.FC<{ isFocused?: boolean }> = ({ isFocused = true }) => {
+export const PhotorealisticEarth: React.FC<{
+  isFocused?: boolean;
+  planetPositionsRef?: React.MutableRefObject<Record<string, { pos: THREE.Vector3; viewDist: number }>>;
+}> = ({ isFocused = true, planetPositionsRef }) => {
   const earthRef = useRef<THREE.Mesh>(null);
   const atmosphereRef = useRef<THREE.Mesh>(null);
 
@@ -135,7 +138,7 @@ export const PhotorealisticEarth: React.FC<{ isFocused?: boolean }> = ({ isFocus
       </mesh>
 
       {/* 4. Earth's Moon (Luna) Orbit Group */}
-      <PlanetMoons3DGroup planetName="Earth" isFocused={isFocused} />
+      <PlanetMoons3DGroup planetName="Earth" isFocused={isFocused} planetPositionsRef={planetPositionsRef} />
 
       {/* 5. Exact Center Slogan: "Mani Tech UNIVERSE" */}
       <Html

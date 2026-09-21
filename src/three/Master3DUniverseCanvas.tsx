@@ -36,6 +36,9 @@ import { PhotorealisticEarth } from './PhotorealisticEarth';
 import { RealisticOrbitalBeams } from './RealisticOrbitalBeams';
 import { CinematicSpaceBackdrop } from './CinematicSpaceBackdrop';
 import { SolarSystemPlanets } from './SolarSystemPlanets';
+import { DwarfPlanets3D } from './DwarfPlanets3D';
+import { Comets3D } from './Comets3D';
+import { KuiperBelt3D, OortCloud3D } from './TransNeptunianBelts';
 import { TECH_NODES_OVERLAY } from '../data/overlayData';
 import type { TechNodeOverlay } from '../data/overlayData';
 import * as THREE from 'three';
@@ -68,47 +71,62 @@ const SceneCameraController: React.FC<{
   controlsRef: React.RefObject<OrbitControlsImpl | null>;
   planetPositionsRef: React.MutableRefObject<Record<string, { pos: THREE.Vector3; viewDist: number }>>;
 }> = ({ selectedNode, selectedPlanetName, viewMode, controlsRef, planetPositionsRef }) => {
+  const prevTargetPlanetRef = useRef<string | null>(null);
+  const isTransitioningRef = useRef<boolean>(false);
+
+  // Trigger smooth one-time camera entry flight whenever a new planet is selected
+  useMemo(() => {
+    if (selectedPlanetName !== prevTargetPlanetRef.current) {
+      prevTargetPlanetRef.current = selectedPlanetName;
+      isTransitioningRef.current = true;
+    }
+  }, [selectedPlanetName]);
+
   useFrame(({ camera }) => {
     if (controlsRef.current) {
       if (selectedPlanetName && planetPositionsRef.current[selectedPlanetName]) {
         let { pos: planetPos, viewDist } = planetPositionsRef.current[selectedPlanetName];
 
         // Mobile responsiveness adjustment:
-        // On narrow mobile screens (< 640px), scale up camera view distance (especially for Sun R=6.0) so it doesn't overflow mobile screen
         const isMobile = window.innerWidth < 640;
         if (isMobile) {
           if (selectedPlanetName === 'Sun') {
-            viewDist *= 1.75; // Zoom out Sun view from 16.5 to ~28.8 on mobile screens
+            viewDist *= 1.75;
           } else {
-            viewDist *= 1.25; // Slight zoom out for planets on mobile for better framing
+            viewDist *= 1.25;
           }
         }
 
-        // 1. Lock orbit target center right onto the center of the planet
-        controlsRef.current.target.lerp(planetPos, 0.08);
+        // 1. Keep orbit pivot target locked to the selected planet's center
+        controlsRef.current.target.lerp(planetPos, 0.1);
 
-        // 2. Camera flies up close in front of the planet (Earth-sized view!)
-        // Once arrived, let OrbitControls have full free 360° rotation around the planet without snapping!
-        const camOffset = camera.position.clone().sub(planetPos);
-        const currentDist = camOffset.length();
-        if (Math.abs(currentDist - viewDist) > 0.3) {
-          if (currentDist < 0.1) camOffset.set(0, 1, 2);
-          const desiredCamPos = planetPos.clone().add(camOffset.normalize().multiplyScalar(viewDist));
-          camera.position.lerp(desiredCamPos, 0.08);
+        // 2. Smooth entry flight on selection, then release camera control to allow 100% free Mouse Wheel Zoom In / Out!
+        if (isTransitioningRef.current) {
+          const camOffset = camera.position.clone().sub(planetPos);
+          const currentDist = camOffset.length();
+          if (Math.abs(currentDist - viewDist) > 0.4) {
+            if (currentDist < 0.1) camOffset.set(0, 1, 2);
+            const desiredCamPos = planetPos.clone().add(camOffset.normalize().multiplyScalar(viewDist));
+            camera.position.lerp(desiredCamPos, 0.1);
+          } else {
+            // Arrived! Give user 100% free control for Zoom In / Zoom Out and 360° Orbiting
+            isTransitioningRef.current = false;
+          }
         }
       } else if (viewMode === 'solarsystem') {
-        // Macro view: observe entire solar system center
         const targetPos = new THREE.Vector3(12, 0, 0);
         controlsRef.current.target.lerp(targetPos, 0.05);
 
-        // Fly camera out to overview distance (110 units) ONLY when zooming in/out!
-        // Once arrived, stop camera lerp to allow 100% free 360° orbit rotation at any angle without snapping back!
-        const camOffset = camera.position.clone().sub(targetPos);
-        const currentDist = camOffset.length();
-        if (Math.abs(currentDist - 110) > 6.0) {
-          if (currentDist < 0.1) camOffset.set(0, 50, 100);
-          const desiredCamPos = targetPos.clone().add(camOffset.normalize().multiplyScalar(110));
-          camera.position.lerp(desiredCamPos, 0.05);
+        if (isTransitioningRef.current) {
+          const camOffset = camera.position.clone().sub(targetPos);
+          const currentDist = camOffset.length();
+          if (Math.abs(currentDist - 110) > 6.0) {
+            if (currentDist < 0.1) camOffset.set(0, 50, 100);
+            const desiredCamPos = targetPos.clone().add(camOffset.normalize().multiplyScalar(110));
+            camera.position.lerp(desiredCamPos, 0.05);
+          } else {
+            isTransitioningRef.current = false;
+          }
         }
       } else if (selectedNode && ISLAND_3D_COORDS[selectedNode.id]) {
         const pos = ISLAND_3D_COORDS[selectedNode.id];
@@ -116,7 +134,6 @@ const SceneCameraController: React.FC<{
       } else {
         // Return smoothly to Earth center
         controlsRef.current.target.lerp(new THREE.Vector3(0.35, 0.05, 0), 0.04);
-        // If camera was far out in deep space, smoothly return to Earth orbit distance
         if (!selectedNode && viewMode === 'earth' && !selectedPlanetName && camera.position.length() > 25) {
           camera.position.lerp(new THREE.Vector3(0, 0, 13.2), 0.04);
         }
@@ -615,6 +632,7 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
   const [viewMode, setViewMode] = useState<'earth' | 'solarsystem'>('earth');
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeMenuTab, setActiveMenuTab] = useState<'planets' | 'moons' | 'dwarfs' | 'comets' | null>(null);
 
   return (
     <div className="absolute inset-0 w-full h-full pointer-events-auto cursor-grab active:cursor-grabbing">
@@ -650,7 +668,7 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
           />
 
           <CinematicSpaceBackdrop />
-          <PhotorealisticEarth isFocused={selectedPlanetName === 'Earth' || (!selectedPlanetName && viewMode === 'earth')} />
+          <PhotorealisticEarth isFocused={selectedPlanetName === 'Earth' || (!selectedPlanetName && viewMode === 'earth')} planetPositionsRef={planetPositionsRef} />
           <RealisticOrbitalBeams nodePositions={ISLAND_3D_COORDS} />
 
           {/* Real Distant Solar System Planets (Click planet or its orbit to fly right up close!) */}
@@ -663,6 +681,24 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
             isSolarMode={viewMode === 'solarsystem'}
             planetPositionsRef={planetPositionsRef}
           />
+
+          {/* 3D Dwarf Planets (Pluto, Ceres, Eris, Haumea, Makemake) */}
+          <DwarfPlanets3D
+            onSelectPlanet={(name) => {
+              setSelectedPlanetName(name);
+              setViewMode('earth');
+            }}
+            selectedPlanetName={selectedPlanetName}
+            isSolarMode={viewMode === 'solarsystem'}
+            planetPositionsRef={planetPositionsRef}
+          />
+
+          {/* 3D Comets with Solar Dust/Ion Tails (Halley's Comet, NEOWISE) */}
+          <Comets3D isSolarMode={viewMode === 'solarsystem'} planetPositionsRef={planetPositionsRef} />
+
+          {/* 3D Trans-Neptunian Kuiper Belt & Outer Oort Cloud Shell */}
+          <KuiperBelt3D isSolarMode={viewMode === 'solarsystem'} />
+          <OortCloud3D isSolarMode={viewMode === 'solarsystem'} />
 
           {/* Realistic 3D Satellites orbiting Earth with Solar Panels & HUD tags */}
           {TECH_NODES_OVERLAY.map((node) => {
@@ -790,93 +826,242 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
         )}
       </div>
 
-      {/* DESKTOP-ONLY FLOATING BOTTOM BAR (sm:flex) */}
-      <div className="hidden sm:flex absolute bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-auto items-center gap-2 px-4 py-2 rounded-full bg-[#050d1d]/90 backdrop-blur-md border border-slate-700/60 shadow-[0_10px_35px_rgba(0,0,0,0.85)] text-xs max-w-max">
-        <button
-          onClick={() => {
-            setSelectedPlanetName(null);
-            setViewMode('earth');
-          }}
-          className={`px-3 py-1.5 rounded-full font-semibold transition-all cursor-pointer shrink-0 ${
-            viewMode === 'earth' && !selectedPlanetName
-              ? 'bg-cyan-500 text-black shadow-[0_0_18px_rgba(56,189,248,0.8)] scale-105'
-              : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-          }`}
-        >
-          🌍 Earth
-        </button>
-        <button
-          onClick={() => {
-            setSelectedPlanetName(null);
-            setViewMode('solarsystem');
-          }}
-          className={`px-3 py-1.5 rounded-full font-semibold transition-all cursor-pointer shrink-0 ${
-            viewMode === 'solarsystem' && !selectedPlanetName
-              ? 'bg-amber-400 text-black shadow-[0_0_18px_rgba(251,191,36,0.8)] scale-105'
-              : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-          }`}
-        >
-          🪐 Solar System
-        </button>
+      {/* MOBILE & DESKTOP CATEGORIZED FLOATING NAVIGATION HUD */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-auto flex flex-col items-center gap-2 max-w-[95vw]">
+        {/* Active Category Dropdown Drawer (visible when user opens Planets, Moons, Dwarf Planets, or Comets menu) */}
+        {activeMenuTab === 'planets' && (
+          <div className="flex flex-wrap items-center justify-center gap-2 p-3 rounded-2xl bg-[#030914]/95 border border-cyan-500/50 shadow-[0_15px_40px_rgba(0,0,0,0.9)] backdrop-blur-2xl text-xs max-w-xl animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <div className="w-full text-[10px] uppercase font-bold tracking-widest text-cyan-400 pb-1 border-b border-slate-800 flex items-center justify-between">
+              <span>🪐 8 Solar Planets</span>
+              <button onClick={() => setActiveMenuTab(null)} className="text-slate-400 hover:text-white px-1 font-mono">✕ Close</button>
+            </div>
+            {[
+              { name: 'Mercury', symbol: '☿', color: 'from-amber-600 to-yellow-500' },
+              { name: 'Venus', symbol: '♀', color: 'from-orange-500 to-amber-400' },
+              { name: 'Earth', symbol: '🌍', color: 'from-blue-600 to-cyan-400' },
+              { name: 'Mars', symbol: '♂', color: 'from-red-600 to-rose-400' },
+              { name: 'Jupiter', symbol: '♃', color: 'from-amber-700 to-orange-400' },
+              { name: 'Saturn', symbol: '♄', color: 'from-yellow-600 to-amber-300' },
+              { name: 'Uranus', symbol: '♅', color: 'from-cyan-600 to-teal-300' },
+              { name: 'Neptune', symbol: '♆', color: 'from-blue-700 to-indigo-400' },
+            ].map((p) => {
+              const isCurrent = selectedPlanetName === p.name;
+              return (
+                <button
+                  key={p.name}
+                  onClick={() => {
+                    setSelectedPlanetName(p.name);
+                    setViewMode('earth');
+                    setActiveMenuTab(null);
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                    isCurrent
+                      ? 'bg-cyan-400 text-black border-cyan-300 shadow-[0_0_15px_rgba(56,189,248,0.9)] scale-105'
+                      : 'bg-slate-900/90 text-slate-200 hover:bg-cyan-950 hover:text-cyan-300 border-slate-700/60'
+                  }`}
+                >
+                  <span className="text-sm">{p.symbol}</span>
+                  <span>{p.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
-        {/* Quick-Jump Planet Selectors for seamless navigation between planets */}
-        <div className="flex items-center gap-1 pl-1.5 border-l border-slate-700/80 shrink-0">
-          {(['Sun', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune'] as const).map((pName) => {
-            const isCurrent = selectedPlanetName === pName;
-            return (
+        {activeMenuTab === 'moons' && (
+          <div className="flex flex-wrap items-center justify-center gap-1.5 p-3 rounded-2xl bg-[#030914]/95 border border-cyan-500/50 shadow-[0_15px_40px_rgba(0,0,0,0.9)] backdrop-blur-2xl text-xs max-w-2xl max-h-[45vh] overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <div className="w-full text-[10px] uppercase font-bold tracking-widest text-cyan-400 pb-1 border-b border-slate-800 flex items-center justify-between">
+              <span>🌙 Major Moons Selection</span>
+              <button onClick={() => setActiveMenuTab(null)} className="text-slate-400 hover:text-white px-1 font-mono">✕ Close</button>
+            </div>
+
+            {/* Moons grouped by planet */}
+            {[
+              { planet: 'Earth 🌍', moons: ['The Moon (Luna)'] },
+              { planet: 'Mars ♂', moons: ['Phobos', 'Deimos'] },
+              { planet: 'Jupiter ♃', moons: ['Ganymede', 'Callisto', 'Io', 'Europa', 'Amalthea'] },
+              { planet: 'Saturn ♄', moons: ['Titan', 'Rhea', 'Iapetus', 'Dione', 'Tethys', 'Enceladus', 'Mimas', 'Hyperion'] },
+              { planet: 'Uranus ♅', moons: ['Titania', 'Oberon', 'Ariel', 'Umbriel', 'Miranda'] },
+              { planet: 'Neptune ♆', moons: ['Triton', 'Nereid', 'Proteus'] },
+            ].map((group) => (
+              <div key={group.planet} className="w-full flex items-center gap-1 py-1 border-b border-slate-800/60 last:border-0">
+                <span className="text-[10px] font-semibold text-slate-400 min-w-[70px] shrink-0">{group.planet}:</span>
+                <div className="flex flex-wrap items-center gap-1">
+                  {group.moons.map((mName) => (
+                    <button
+                      key={mName}
+                      onClick={() => {
+                        setSelectedPlanetName(mName);
+                        setViewMode('earth');
+                        setActiveMenuTab(null);
+                      }}
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-all cursor-pointer ${
+                        selectedPlanetName === mName
+                          ? 'bg-cyan-400 text-black font-bold shadow-[0_0_10px_rgba(56,189,248,0.9)]'
+                          : 'bg-slate-800/80 text-slate-200 hover:bg-cyan-950 hover:text-cyan-300 hover:border-cyan-500/50 border border-slate-700/50'
+                      }`}
+                    >
+                      {mName}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeMenuTab === 'dwarfs' && (
+          <div className="flex flex-wrap items-center justify-center gap-1.5 p-3 rounded-2xl bg-[#030914]/95 border border-cyan-500/50 shadow-[0_15px_40px_rgba(0,0,0,0.9)] backdrop-blur-2xl text-xs max-w-lg animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <div className="w-full text-[10px] uppercase font-bold tracking-widest text-cyan-400 pb-1 border-b border-slate-800 flex items-center justify-between">
+              <span>🔵 Dwarf Planets</span>
+              <button onClick={() => setActiveMenuTab(null)} className="text-slate-400 hover:text-white px-1 font-mono">✕ Close</button>
+            </div>
+            {['Pluto', 'Ceres', 'Eris', 'Haumea', 'Makemake'].map((dName) => (
               <button
-                key={pName}
+                key={dName}
                 onClick={() => {
-                  setSelectedPlanetName(pName);
+                  setSelectedPlanetName(dName);
                   setViewMode('earth');
+                  setActiveMenuTab(null);
                 }}
-                className={`px-2 py-1 rounded-full text-[11px] font-medium transition-all cursor-pointer shrink-0 ${
-                  isCurrent
-                    ? pName === 'Sun'
-                      ? 'bg-amber-400 text-black font-bold shadow-[0_0_14px_rgba(251,191,36,0.95)] scale-105'
-                      : 'bg-cyan-400 text-black font-bold shadow-[0_0_12px_rgba(56,189,248,0.9)] scale-105'
-                    : 'text-slate-400 hover:text-amber-300 hover:bg-slate-800/50'
+                className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all cursor-pointer ${
+                  selectedPlanetName === dName
+                    ? 'bg-cyan-400 text-black font-bold shadow-[0_0_12px_rgba(56,189,248,0.9)] scale-105'
+                    : 'bg-slate-800/80 text-slate-200 hover:bg-cyan-950 hover:text-cyan-300 border border-slate-700/50'
                 }`}
               >
-                {pName === 'Sun' && '☀️ '}
-                {pName === 'Mercury' && '☿ '}
-                {pName === 'Venus' && '♀ '}
-                {pName === 'Mars' && '♂ '}
-                {pName === 'Jupiter' && '♃ '}
-                {pName === 'Saturn' && '♄ '}
-                {pName === 'Uranus' && '♅ '}
-                {pName === 'Neptune' && '♆ '}
-                {pName}
+                🔵 {dName}
               </button>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        )}
 
-        {selectedPlanetName && (
+        {activeMenuTab === 'comets' && (
+          <div className="flex flex-wrap items-center justify-center gap-1.5 p-3 rounded-2xl bg-[#030914]/95 border border-cyan-500/50 shadow-[0_15px_40px_rgba(0,0,0,0.9)] backdrop-blur-2xl text-xs max-w-md animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <div className="w-full text-[10px] uppercase font-bold tracking-widest text-cyan-400 pb-1 border-b border-slate-800 flex items-center justify-between">
+              <span>☄️ Comets</span>
+              <button onClick={() => setActiveMenuTab(null)} className="text-slate-400 hover:text-white px-1 font-mono">✕ Close</button>
+            </div>
+            {["Halley's Comet (1P/Halley)", 'Comet NEOWISE (C/2020 F3)'].map((cName) => (
+              <button
+                key={cName}
+                onClick={() => {
+                  setSelectedPlanetName(cName);
+                  setViewMode('solarsystem');
+                  setActiveMenuTab(null);
+                }}
+                className={`px-3 py-1 rounded-full text-[11px] font-medium transition-all cursor-pointer ${
+                  selectedPlanetName === cName
+                    ? 'bg-sky-400 text-black font-bold shadow-[0_0_12px_rgba(56,189,248,0.9)] scale-105'
+                    : 'bg-slate-800/80 text-slate-200 hover:bg-cyan-950 hover:text-cyan-300 border border-slate-700/50'
+                }`}
+              >
+                ☄️ {cName}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* MAIN CATEGORY NAVIGATION BAR */}
+        <div className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-[#050d1d]/95 backdrop-blur-md border border-slate-700/80 shadow-[0_10px_35px_rgba(0,0,0,0.85)] text-xs flex-wrap justify-center">
+          {/* Solar Overview Button */}
           <button
             onClick={() => {
               setSelectedPlanetName(null);
               setViewMode('solarsystem');
+              setActiveMenuTab(null);
             }}
-            className="text-slate-400 hover:text-rose-400 ml-1 text-xs font-bold cursor-pointer transition-colors px-1.5 py-1 rounded-full bg-slate-800/50 shrink-0"
-            title="Return to Solar System Overview"
+            className={`px-3 py-1 rounded-full font-semibold transition-all cursor-pointer ${
+              viewMode === 'solarsystem' && !selectedPlanetName
+                ? 'bg-amber-400 text-black shadow-[0_0_16px_rgba(251,191,36,0.8)] scale-105'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+            }`}
           >
-            ✕ Close
+            🪐 Solar Overview
           </button>
-        )}
 
-        {/* Integrated AI Intelligence Button inside bottom bar */}
-        <button
-          onClick={() => {
-            const event = new CustomEvent('toggle-ai-assistant');
-            window.dispatchEvent(event);
-          }}
-          className="ml-1 px-3 py-1.5 rounded-full bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-400/60 text-cyan-300 font-semibold shadow-[0_0_12px_rgba(56,189,248,0.5)] flex items-center gap-1.5 shrink-0 transition-all cursor-pointer"
-        >
-          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-          <svg className="w-3.5 h-3.5 text-cyan-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
-          <span>Ask Intelligence</span>
-        </button>
+          {/* Star Sun Button */}
+          <button
+            onClick={() => {
+              setSelectedPlanetName('Sun');
+              setViewMode('earth');
+              setActiveMenuTab(null);
+            }}
+            className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all cursor-pointer ${
+              selectedPlanetName === 'Sun'
+                ? 'bg-amber-400 text-black font-bold shadow-[0_0_14px_rgba(251,191,36,0.95)] scale-105'
+                : 'text-amber-300 hover:bg-amber-950/50'
+            }`}
+          >
+            ☀️ Sun
+          </button>
+
+          {/* 8 Planets Category Menu Toggle */}
+          <button
+            onClick={() => setActiveMenuTab(activeMenuTab === 'planets' ? null : 'planets')}
+            className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1 border ${
+              activeMenuTab === 'planets'
+                ? 'bg-cyan-500 text-black border-cyan-400 shadow-[0_0_14px_rgba(56,189,248,0.8)]'
+                : 'bg-slate-800/60 text-slate-300 hover:text-cyan-300 border-slate-700/60'
+            }`}
+          >
+            <span>🪐 Planets</span>
+            <span className="text-[9px]">▼</span>
+          </button>
+
+          {/* Moons Category Menu Toggle */}
+          <button
+            onClick={() => setActiveMenuTab(activeMenuTab === 'moons' ? null : 'moons')}
+            className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1 border ${
+              activeMenuTab === 'moons'
+                ? 'bg-cyan-500 text-black border-cyan-400 shadow-[0_0_14px_rgba(56,189,248,0.8)]'
+                : 'bg-slate-800/60 text-slate-300 hover:text-cyan-300 border-slate-700/60'
+            }`}
+          >
+            <span>🌙 Moons</span>
+            <span className="text-[9px]">▼</span>
+          </button>
+
+          {/* Dwarf Planets Category Menu Toggle */}
+          <button
+            onClick={() => setActiveMenuTab(activeMenuTab === 'dwarfs' ? null : 'dwarfs')}
+            className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1 border ${
+              activeMenuTab === 'dwarfs'
+                ? 'bg-cyan-500 text-black border-cyan-400 shadow-[0_0_14px_rgba(56,189,248,0.8)]'
+                : 'bg-slate-800/60 text-slate-300 hover:text-cyan-300 border-slate-700/60'
+            }`}
+          >
+            <span>🔵 Dwarf Planets</span>
+            <span className="text-[9px]">▼</span>
+          </button>
+
+          {/* Comets Category Menu Toggle */}
+          <button
+            onClick={() => setActiveMenuTab(activeMenuTab === 'comets' ? null : 'comets')}
+            className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1 border ${
+              activeMenuTab === 'comets'
+                ? 'bg-cyan-500 text-black border-cyan-400 shadow-[0_0_14px_rgba(56,189,248,0.8)]'
+                : 'bg-slate-800/60 text-slate-300 hover:text-cyan-300 border-slate-700/60'
+            }`}
+          >
+            <span>☄️ Comets</span>
+            <span className="text-[9px]">▼</span>
+          </button>
+
+          {selectedPlanetName && (
+            <button
+              onClick={() => {
+                setSelectedPlanetName(null);
+                setViewMode('solarsystem');
+                setActiveMenuTab(null);
+              }}
+              className="text-slate-400 hover:text-rose-400 ml-1 text-xs font-bold cursor-pointer transition-colors px-2 py-0.5 rounded-full bg-slate-800/60"
+              title="Return to Solar Overview"
+            >
+              ✕ Close Target
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

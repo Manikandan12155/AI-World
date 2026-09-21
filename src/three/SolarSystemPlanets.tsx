@@ -1057,7 +1057,7 @@ export const SolarSystemPlanets: React.FC<SolarSystemProps> = ({
         </mesh>
 
         {/* 3D Moons of Mars (Phobos & Deimos) */}
-        <PlanetMoons3DGroup planetName="Mars" isFocused={selectedPlanetName === 'Mars'} />
+        <PlanetMoons3DGroup planetName="Mars" isFocused={selectedPlanetName === 'Mars'} planetPositionsRef={planetPositionsRef} />
 
         <Html position={[0, 1.15, 0]} center distanceFactor={selectedPlanetName === 'Mars' ? 13 : 32} className="pointer-events-auto select-none">
           <button
@@ -1100,7 +1100,7 @@ export const SolarSystemPlanets: React.FC<SolarSystemProps> = ({
         </mesh>
 
         {/* 3D Moons of Jupiter (Ganymede, Callisto, Io, Europa, Amalthea + 58 Swarm Moons) */}
-        <PlanetMoons3DGroup planetName="Jupiter" isFocused={selectedPlanetName === 'Jupiter'} />
+        <PlanetMoons3DGroup planetName="Jupiter" isFocused={selectedPlanetName === 'Jupiter'} planetPositionsRef={planetPositionsRef} />
 
         <Html position={[0, 2.7, 0]} center distanceFactor={selectedPlanetName === 'Jupiter' ? 14 : 38} className="pointer-events-auto select-none">
           <button
@@ -1145,7 +1145,7 @@ export const SolarSystemPlanets: React.FC<SolarSystemProps> = ({
         </mesh>
 
         {/* 3D Moons of Saturn (Titan, Enceladus, Mimas, Rhea, Iapetus + 229 Swarm Moons) */}
-        <PlanetMoons3DGroup planetName="Saturn" isFocused={selectedPlanetName === 'Saturn'} />
+        <PlanetMoons3DGroup planetName="Saturn" isFocused={selectedPlanetName === 'Saturn'} planetPositionsRef={planetPositionsRef} />
 
         <Html position={[0, 2.4, 0]} center distanceFactor={selectedPlanetName === 'Saturn' ? 14 : 44} className="pointer-events-auto select-none">
           <button
@@ -1187,8 +1187,20 @@ export const SolarSystemPlanets: React.FC<SolarSystemProps> = ({
           />
         </mesh>
 
+        {/* Uranus Vertical Tilted 3D Ring System */}
+        <mesh rotation={[Math.PI / 2.2, 0.4, 0]}>
+          <ringGeometry args={[1.7, 2.8, 64]} />
+          <meshBasicMaterial
+            color="#06b6d4"
+            transparent
+            opacity={0.35}
+            side={THREE.DoubleSide}
+            blending={THREE.AdditiveBlending}
+          />
+        </mesh>
+
         {/* 3D Moons of Uranus (Titania, Oberon, Ariel, Umbriel, Miranda + Swarm) */}
-        <PlanetMoons3DGroup planetName="Uranus" isFocused={selectedPlanetName === 'Uranus'} />
+        <PlanetMoons3DGroup planetName="Uranus" isFocused={selectedPlanetName === 'Uranus'} planetPositionsRef={planetPositionsRef} />
 
         <Html position={[0, 1.8, 0]} center distanceFactor={selectedPlanetName === 'Uranus' ? 13 : 48} className="pointer-events-auto select-none">
           <button
@@ -1230,8 +1242,20 @@ export const SolarSystemPlanets: React.FC<SolarSystemProps> = ({
           />
         </mesh>
 
+        {/* Neptune Faint Icy 3D Ring System */}
+        <mesh rotation={[Math.PI / 3, 0.1, 0]}>
+          <ringGeometry args={[1.5, 2.4, 64]} />
+          <meshBasicMaterial
+            color="#38bdf8"
+            transparent
+            opacity={0.22}
+            side={THREE.DoubleSide}
+            blending={THREE.AdditiveBlending}
+          />
+        </mesh>
+
         {/* 3D Moons of Neptune (Triton, Nereid, Proteus + Swarm) */}
-        <PlanetMoons3DGroup planetName="Neptune" isFocused={selectedPlanetName === 'Neptune'} />
+        <PlanetMoons3DGroup planetName="Neptune" isFocused={selectedPlanetName === 'Neptune'} planetPositionsRef={planetPositionsRef} />
 
         <Html position={[0, 1.6, 0]} center distanceFactor={selectedPlanetName === 'Neptune' ? 13 : 50} className="pointer-events-auto select-none">
           <button

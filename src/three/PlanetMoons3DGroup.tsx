@@ -11,8 +11,10 @@ export const EARTH_SUN_POSITION = new THREE.Vector3(26, 14, 14);
 export interface PlanetMoons3DProps {
   planetName: string;
   isFocused?: boolean;
+  planetPositionsRef?: React.MutableRefObject<Record<string, { pos: THREE.Vector3; viewDist: number }>>;
 }
 
+// Shader material for textured major moons (uses moon.dayTexture and optional nightTexture)
 const TexturedMoonMesh: React.FC<{ moon: MoonData }> = ({ moon }) => {
   const meshRef = useRef<THREE.Mesh>(null);
 
@@ -67,23 +69,16 @@ const TexturedMoonMesh: React.FC<{ moon: MoonData }> = ({ moon }) => {
           vec3 normal = normalize(vNormal);
           vec3 sunDir = normalize(sunPosition - vWorldPosition);
 
-          // Sunlight incidence calculation
           float NdotL = dot(normal, sunDir);
-
-          // Smooth Day/Night terminator transition factor
           float dayFactor = smoothstep(-0.20, 0.25, NdotL);
 
           vec4 dayColor = texture2D(dayTexture, vUv);
           vec4 nightTexColor = texture2D(nightTexture, vUv);
 
-          // Sunlit Day Side
           float dayLighting = clamp(NdotL * 0.45 + 0.65, 0.55, 1.15);
           vec3 daySide = dayColor.rgb * dayLighting;
-
-          // Dark Night Side (uses nightTexture if provided like Earth Moon, else generates photorealistic dark space night side)
           vec3 nightSide = hasNightTex ? nightTexColor.rgb : (dayColor.rgb * 0.08 + vec3(0.01, 0.02, 0.04));
 
-          // Natural grazing twilight glow along the Day/Night boundary
           float twilight = clamp(1.0 - abs(NdotL) * 3.0, 0.0, 1.0);
           vec3 twilightGlow = dayColor.rgb * twilight * 0.15;
 
@@ -169,13 +164,24 @@ const ColoredMoonMesh: React.FC<{ moon: MoonData }> = ({ moon }) => {
 const SingleMoon3DMesh: React.FC<{
   moon: MoonData;
   isFocused?: boolean;
-}> = ({ moon, isFocused }) => {
+  planetPositionsRef?: React.MutableRefObject<Record<string, { pos: THREE.Vector3; viewDist: number }>>;
+}> = ({ moon, isFocused, planetPositionsRef }) => {
   const moonRef = useRef<THREE.Group>(null);
+  const moonGroupRef = useRef<THREE.Group>(null);
 
   useFrame((_, delta) => {
     if (moonRef.current) {
-      // Orbital rotation around parent planet (perfect horizontal plane, no tilt!)
+      // Orbital rotation around parent planet
       moonRef.current.rotation.y += delta * moon.speed;
+    }
+
+    if (moonGroupRef.current && planetPositionsRef) {
+      const worldPos = new THREE.Vector3();
+      moonGroupRef.current.getWorldPosition(worldPos);
+      planetPositionsRef.current[moon.name] = {
+        pos: worldPos,
+        viewDist: Math.max(1.8, moon.size * 5.0 + 1.2),
+      };
     }
   });
 
@@ -196,7 +202,7 @@ const SingleMoon3DMesh: React.FC<{
       )}
 
       {/* 3D Moon Mesh positioned at radiusOffset */}
-      <group position={[moon.radiusOffset, 0, 0]}>
+      <group ref={moonGroupRef} position={[moon.radiusOffset, 0, 0]}>
         {moon.dayTexture ? (
           <TexturedMoonMesh moon={moon} />
         ) : (
@@ -337,7 +343,7 @@ const AutonomousMoonsSwarm: React.FC<{
   );
 };
 
-export const PlanetMoons3DGroup: React.FC<PlanetMoons3DProps> = ({ planetName, isFocused }) => {
+export const PlanetMoons3DGroup: React.FC<PlanetMoons3DProps> = ({ planetName, isFocused, planetPositionsRef }) => {
   const data = PLANET_MOONS_DATA[planetName];
   if (!data || data.totalMoons === 0) return null;
 
@@ -345,7 +351,7 @@ export const PlanetMoons3DGroup: React.FC<PlanetMoons3DProps> = ({ planetName, i
     <group>
       {/* 1. Major Named Moons */}
       {data.majorMoons.map((moon) => (
-        <SingleMoon3DMesh key={moon.name} moon={moon} isFocused={isFocused} />
+        <SingleMoon3DMesh key={moon.name} moon={moon} isFocused={isFocused} planetPositionsRef={planetPositionsRef} />
       ))}
 
       {/* 2. Autonomous / Provisional Small Outer Moons Swarm */}
