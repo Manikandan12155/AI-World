@@ -9,10 +9,9 @@ export const CinematicSpaceBackdrop: React.FC = () => {
   const moonRef = useRef<THREE.Group>(null);
   const sunMeshRef = useRef<THREE.Group>(null);
 
-  // Load 360-degree Equirectangular Cosmic Texture, Moon, and Photorealistic Sun Surface
-  const [spaceTexture, moonTexture, sunSurfaceTexture] = useLoader(THREE.TextureLoader, [
+  // Load 360-degree Equirectangular Cosmic Texture and Photorealistic Sun Surface
+  const [spaceTexture, sunSurfaceTexture] = useLoader(THREE.TextureLoader, [
     getAssetUrl('/textures/milkyway_equirectangular_360.jpg'),
-    getAssetUrl('/textures/moon_1024.jpg'),
     getAssetUrl('/textures/sun_photorealistic.jpg')
   ]);
 
@@ -179,18 +178,6 @@ export const CinematicSpaceBackdrop: React.FC = () => {
 
         {/* High-power radiating solar light illuminating Earth and Moon from deep space */}
         <pointLight color="#fff7e6" intensity={7} distance={250} decay={0.3} />
-      </group>
-
-      {/* 3. THE MOON (Realistic NASA Lunar Surface orbiting Earth) */}
-      <group ref={moonRef} position={[4.8, 1.2, 1.8]}>
-        <mesh castShadow receiveShadow>
-          <sphereGeometry args={[0.55, 32, 32]} />
-          <meshStandardMaterial
-            map={moonTexture}
-            roughness={0.9}
-            metalness={0.05}
-          />
-        </mesh>
       </group>
 
       {/* 4. Powerful Direct Sunlight shining directly from the Sun */}

@@ -650,7 +650,7 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
           />
 
           <CinematicSpaceBackdrop />
-          <PhotorealisticEarth />
+          <PhotorealisticEarth isFocused={selectedPlanetName === 'Earth' || (!selectedPlanetName && viewMode === 'earth')} />
           <RealisticOrbitalBeams nodePositions={ISLAND_3D_COORDS} />
 
           {/* Real Distant Solar System Planets (Click planet or its orbit to fly right up close!) */}
