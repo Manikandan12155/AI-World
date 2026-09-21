@@ -35,7 +35,7 @@ import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { PhotorealisticEarth } from './PhotorealisticEarth';
 import { RealisticOrbitalBeams } from './RealisticOrbitalBeams';
 import { CinematicSpaceBackdrop } from './CinematicSpaceBackdrop';
-import { SolarSystemPlanets } from './SolarSystemPlanets';
+import { SolarSystemPlanets, ProceduralAsteroidBelt } from './SolarSystemPlanets';
 import { DwarfPlanets3D } from './DwarfPlanets3D';
 import { Comets3D } from './Comets3D';
 import { KuiperBelt3D, OortCloud3D } from './TransNeptunianBelts';
@@ -45,22 +45,25 @@ import * as THREE from 'three';
 
 import { getAssetUrl } from '../utils/assetPath';
 
-// 3D coordinates around Earth for the clean interactive labels
+// 3D coordinates around Earth for the clean interactive labels - scattered randomly in a spherical shell
 export const ISLAND_3D_COORDS: Record<string, [number, number, number]> = {
-  'ai-genai': [0.4, 3.4, 0.4],
-  'research': [-2.7, 2.7, 0.2],
-  'ai-agents': [3.4, 2.7, 0.7],
-  'trending': [-3.7, 0.7, 0.5],
-  'cloud': [4.6, 1.4, -0.2],
-  'cybersecurity': [4.2, -0.9, 0.6],
-  'development': [3.0, -2.5, 1.2],
-  'hardware': [-0.4, -3.6, 0.8],
-  'tech-jobs': [-3.0, -2.3, 1.0],
+  'ai-genai': [2.5, 2.8, -1.5],
+  'research': [-3.2, 1.5, 2.1],
+  'ai-agents': [1.2, -3.5, 2.0],
+  'trending': [-2.0, -2.8, -2.5],
+  'cloud': [4.0, 0.5, 1.8],
+  'cybersecurity': [-1.5, 4.0, 1.2],
+  'development': [2.8, -1.5, -3.0],
+  'hardware': [-4.2, -1.2, 0.8],
+  'tech-jobs': [0.5, 2.2, 3.8],
 };
+
+import type { UniverseSettings } from '../App';
 
 interface MasterUniverseProps {
   selectedNode: TechNodeOverlay | null;
   onSelectNode: (node: TechNodeOverlay) => void;
+  universeSettings: UniverseSettings;
 }
 
 // Controller to smoothly animate OrbitControls target when a node or planet is clicked
@@ -69,16 +72,18 @@ const SceneCameraController: React.FC<{
   selectedPlanetName: string | null;
   viewMode: 'earth' | 'solarsystem';
   controlsRef: React.RefObject<OrbitControlsImpl | null>;
-  planetPositionsRef: React.MutableRefObject<Record<string, { pos: THREE.Vector3; viewDist: number }>>;
+  planetPositionsRef: React.MutableRefObject<Record<string, { pos: THREE.Vector3; viewDist: number; parentPos?: THREE.Vector3 }>>;
 }> = ({ selectedNode, selectedPlanetName, viewMode, controlsRef, planetPositionsRef }) => {
   const prevTargetPlanetRef = useRef<string | null>(null);
   const isTransitioningRef = useRef<boolean>(false);
+  const lastTargetPosRef = useRef<THREE.Vector3 | null>(null);
 
   // Trigger smooth one-time camera entry flight whenever a new planet is selected
   useMemo(() => {
     if (selectedPlanetName !== prevTargetPlanetRef.current) {
       prevTargetPlanetRef.current = selectedPlanetName;
       isTransitioningRef.current = true;
+      lastTargetPosRef.current = null; // Reset tracking offset
     }
   }, [selectedPlanetName]);
 
@@ -98,20 +103,75 @@ const SceneCameraController: React.FC<{
         }
 
         // 1. Keep orbit pivot target locked to the selected planet's center
-        controlsRef.current.target.lerp(planetPos, 0.1);
+        // Use a faster lerp when we arrive so it perfectly tracks fast-orbiting moons without lag
+        const lerpSpeed = isTransitioningRef.current ? 0.1 : 0.85;
+        controlsRef.current.target.lerp(planetPos, lerpSpeed);
 
         // 2. Smooth entry flight on selection, then release camera control to allow 100% free Mouse Wheel Zoom In / Out!
         if (isTransitioningRef.current) {
-          const camOffset = camera.position.clone().sub(planetPos);
+          // Calculate offset from the actual moving target pivot
+          const camOffset = camera.position.clone().sub(controlsRef.current.target);
           const currentDist = camOffset.length();
           if (Math.abs(currentDist - viewDist) > 0.4) {
             if (currentDist < 0.1) camOffset.set(0, 1, 2);
-            const desiredCamPos = planetPos.clone().add(camOffset.normalize().multiplyScalar(viewDist));
+            // Move towards the target's current position + required distance
+            const desiredCamPos = controlsRef.current.target.clone().add(camOffset.normalize().multiplyScalar(viewDist));
             camera.position.lerp(desiredCamPos, 0.1);
           } else {
             // Arrived! Give user 100% free control for Zoom In / Zoom Out and 360° Orbiting
             isTransitioningRef.current = false;
+            lastTargetPosRef.current = controlsRef.current.target.clone();
           }
+        } else {
+          // We have arrived. User is freely orbiting, but the moon/planet might be moving through space!
+          // Translate the camera position by the EXACT delta the target moved this frame to perfectly follow it.
+          if (lastTargetPosRef.current) {
+            const currentPlanetData = planetPositionsRef.current[selectedPlanetName];
+            
+            if (currentPlanetData && currentPlanetData.parentPos) {
+              // The object is orbiting a parent (e.g. a moon orbiting a planet)
+              // We want the camera to revolve around the parent at the exact same angular speed!
+              const parentPos = currentPlanetData.parentPos;
+              
+              const oldVec = lastTargetPosRef.current.clone().sub(parentPos);
+              const newVec = controlsRef.current.target.clone().sub(parentPos);
+              
+              // Calculate angular movement in XZ plane
+              const oldAngle = Math.atan2(oldVec.z, oldVec.x);
+              const newAngle = Math.atan2(newVec.z, newVec.x);
+              let angleDelta = newAngle - oldAngle;
+              
+              // Normalize angle to avoid full-circle jumps
+              if (angleDelta > Math.PI) angleDelta -= Math.PI * 2;
+              if (angleDelta < -Math.PI) angleDelta += Math.PI * 2;
+              
+              // Rotate camera position around parent by angleDelta
+              const camVec = camera.position.clone().sub(parentPos);
+              const cosA = Math.cos(angleDelta);
+              const sinA = Math.sin(angleDelta);
+              
+              const newCamX = camVec.x * cosA - camVec.z * sinA;
+              const newCamZ = camVec.x * sinA + camVec.z * cosA;
+              
+              camVec.x = newCamX;
+              camVec.z = newCamZ;
+              
+              camera.position.copy(parentPos.clone().add(camVec));
+              
+              // Also add any tiny vertical/radial shifts that might occur (optional but robust)
+              const deltaRadius = newVec.length() - oldVec.length();
+              if (Math.abs(deltaRadius) > 0.001) {
+                  const radialDir = camVec.clone().normalize();
+                  camera.position.add(radialDir.multiplyScalar(deltaRadius));
+              }
+
+            } else {
+              // Simple linear translation for objects without a defined parent (or slow moving planets)
+              const deltaMove = controlsRef.current.target.clone().sub(lastTargetPosRef.current);
+              camera.position.add(deltaMove);
+            }
+          }
+          lastTargetPosRef.current = controlsRef.current.target.clone();
         }
       } else if (viewMode === 'solarsystem') {
         const targetPos = new THREE.Vector3(12, 0, 0);
@@ -499,7 +559,8 @@ const Realistic3DSatellite: React.FC<{
   pos: [number, number, number];
   isSelected: boolean;
   onSelect: (node: TechNodeOverlay) => void;
-}> = ({ node, pos, isSelected, onSelect }) => {
+  showNames?: boolean;
+}> = ({ node, pos, isSelected, onSelect, showNames = true }) => {
   const satelliteRef = useRef<THREE.Group>(null);
 
   // Load Aerospace Satellite Textures: Photovoltaic Solar Array & Gold MLI Thermal Foil
@@ -596,27 +657,29 @@ const Realistic3DSatellite: React.FC<{
       </group>
 
       {/* Floating HUD Satellite Tag Label */}
-      <Html
-        position={[0, 0.36, 0]}
-        center
-        distanceFactor={7.2}
-        className="pointer-events-auto select-none"
-      >
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelect(node);
-          }}
-          className={`group flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-300 cursor-pointer ${isSelected
-              ? 'bg-[#09152b]/95 text-cyan-300 border border-cyan-400 shadow-[0_0_20px_rgba(56,189,248,0.8)] scale-110'
-              : 'bg-[#060e1d]/85 text-slate-200 border border-slate-700/60 shadow-[0_4px_16px_rgba(0,0,0,0.8)] hover:border-cyan-400 hover:scale-105'
-            }`}
+      {showNames && (
+        <Html
+          position={[0, 0.36, 0]}
+          center
+          distanceFactor={7.2}
+          className="pointer-events-auto select-none"
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse inline-block" />
-          <span>{node.name}</span>
-          <span className="text-cyan-400 font-bold ml-0.5">›</span>
-        </button>
-      </Html>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(node);
+            }}
+            className={`group flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-300 cursor-pointer ${isSelected
+                ? 'bg-[#09152b]/95 text-cyan-300 border border-cyan-400 shadow-[0_0_20px_rgba(56,189,248,0.8)] scale-110'
+                : 'bg-[#060e1d]/85 text-slate-200 border border-slate-700/60 shadow-[0_4px_16px_rgba(0,0,0,0.8)] hover:border-cyan-400 hover:scale-105'
+              }`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse inline-block" />
+            <span>{node.name}</span>
+            <span className="text-cyan-400 font-bold ml-0.5">›</span>
+          </button>
+        </Html>
+      )}
     </group>
   );
 };
@@ -624,10 +687,11 @@ const Realistic3DSatellite: React.FC<{
 
 export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
   selectedNode,
-  onSelectNode
+  onSelectNode,
+  universeSettings
 }) => {
   const controlsRef = useRef<OrbitControlsImpl>(null);
-  const planetPositionsRef = useRef<Record<string, { pos: THREE.Vector3; viewDist: number }>>({});
+  const planetPositionsRef = useRef<Record<string, { pos: THREE.Vector3; viewDist: number; parentPos?: THREE.Vector3 }>>({});
   const [selectedPlanetName, setSelectedPlanetName] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'earth' | 'solarsystem'>('earth');
 
@@ -668,40 +732,57 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
           />
 
           <CinematicSpaceBackdrop />
-          <PhotorealisticEarth isFocused={selectedPlanetName === 'Earth' || (!selectedPlanetName && viewMode === 'earth')} planetPositionsRef={planetPositionsRef} />
-          <RealisticOrbitalBeams nodePositions={ISLAND_3D_COORDS} />
+          <PhotorealisticEarth isFocused={selectedPlanetName === 'Earth' || (!selectedPlanetName && viewMode === 'earth')} planetPositionsRef={planetPositionsRef} showMoons={universeSettings.showMoons} showNames={universeSettings.showNames} showOrbits={universeSettings.showOrbits} />
+          
+          {universeSettings.showOrbits && (
+            <RealisticOrbitalBeams nodePositions={ISLAND_3D_COORDS} />
+          )}
 
-          {/* Real Distant Solar System Planets (Click planet or its orbit to fly right up close!) */}
-          <SolarSystemPlanets
-            onSelectPlanet={(name) => {
-              setSelectedPlanetName(name);
-              setViewMode('earth');
-            }}
-            selectedPlanetName={selectedPlanetName}
-            isSolarMode={viewMode === 'solarsystem'}
-            planetPositionsRef={planetPositionsRef}
-          />
+          {universeSettings.showPlanets && (
+            <SolarSystemPlanets
+              onSelectPlanet={(name) => {
+                setSelectedPlanetName(name);
+                setViewMode('solarsystem');
+              }}
+              selectedPlanetName={selectedPlanetName}
+              isSolarMode={viewMode === 'solarsystem'}
+              planetPositionsRef={planetPositionsRef}
+              showMoons={universeSettings.showMoons}
+              showNames={universeSettings.showNames}
+              showOrbits={universeSettings.showOrbits}
+            />
+          )}
 
-          {/* 3D Dwarf Planets (Pluto, Ceres, Eris, Haumea, Makemake) */}
-          <DwarfPlanets3D
-            onSelectPlanet={(name) => {
-              setSelectedPlanetName(name);
-              setViewMode('earth');
-            }}
-            selectedPlanetName={selectedPlanetName}
-            isSolarMode={viewMode === 'solarsystem'}
-            planetPositionsRef={planetPositionsRef}
-          />
+          {universeSettings.showDwarfPlanets && (
+            <DwarfPlanets3D
+              onSelectPlanet={(name) => {
+                setSelectedPlanetName(name);
+                setViewMode('earth');
+              }}
+              selectedPlanetName={selectedPlanetName}
+              isSolarMode={viewMode === 'solarsystem'}
+              hasSelectedPlanet={!!selectedPlanetName}
+              planetPositionsRef={planetPositionsRef}
+              showNames={universeSettings.showNames}
+              showOrbits={universeSettings.showOrbits}
+            />
+          )}
 
-          {/* 3D Comets with Solar Dust/Ion Tails (Halley's Comet, NEOWISE) */}
-          <Comets3D isSolarMode={viewMode === 'solarsystem'} planetPositionsRef={planetPositionsRef} />
+          {universeSettings.showComets && (
+            <Comets3D isSolarMode={viewMode === 'solarsystem'} planetPositionsRef={planetPositionsRef} showNames={universeSettings.showNames} />
+          )}
 
-          {/* 3D Trans-Neptunian Kuiper Belt & Outer Oort Cloud Shell */}
-          <KuiperBelt3D isSolarMode={viewMode === 'solarsystem'} />
-          <OortCloud3D isSolarMode={viewMode === 'solarsystem'} />
+          {/* 3D Trans-Neptunian Kuiper Belt, Outer Oort Cloud Shell & Main Asteroid Belt */}
+          {universeSettings.showAsteroids && (
+            <>
+              <ProceduralAsteroidBelt />
+              <KuiperBelt3D isSolarMode={viewMode === 'solarsystem'} />
+              <OortCloud3D isSolarMode={viewMode === 'solarsystem'} />
+            </>
+          )}
 
           {/* Realistic 3D Satellites orbiting Earth with Solar Panels & HUD tags */}
-          {TECH_NODES_OVERLAY.map((node) => {
+          {universeSettings.showSatellites && TECH_NODES_OVERLAY.map((node) => {
             const pos = ISLAND_3D_COORDS[node.id];
             if (!pos) return null;
             return (
@@ -714,6 +795,7 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
                   setSelectedPlanetName(null);
                   onSelectNode(n);
                 }}
+                showNames={universeSettings.showNames}
               />
             );
           })}
@@ -997,56 +1079,66 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
           </button>
 
           {/* 8 Planets Category Menu Toggle */}
-          <button
-            onClick={() => setActiveMenuTab(activeMenuTab === 'planets' ? null : 'planets')}
-            className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1 border ${
-              activeMenuTab === 'planets'
-                ? 'bg-cyan-500 text-black border-cyan-400 shadow-[0_0_14px_rgba(56,189,248,0.8)]'
-                : 'bg-slate-800/60 text-slate-300 hover:text-cyan-300 border-slate-700/60'
-            }`}
-          >
-            <span>🪐 Planets</span>
-            <span className="text-[9px]">▼</span>
-          </button>
+          {universeSettings.showPlanets && (
+            <button
+              onClick={() => setActiveMenuTab(activeMenuTab === 'planets' ? null : 'planets')}
+              className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1 border ${
+                activeMenuTab === 'planets'
+                  ? 'bg-cyan-500 text-black border-cyan-400 shadow-[0_0_14px_rgba(56,189,248,0.8)]'
+                  : 'bg-slate-800/60 text-slate-300 hover:text-cyan-300 border-slate-700/60'
+              }`}
+            >
+              <span>🪐 Planets</span>
+              <span className="text-[9px]">▼</span>
+            </button>
+          )}
 
           {/* Moons Category Menu Toggle */}
-          <button
-            onClick={() => setActiveMenuTab(activeMenuTab === 'moons' ? null : 'moons')}
-            className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1 border ${
-              activeMenuTab === 'moons'
-                ? 'bg-cyan-500 text-black border-cyan-400 shadow-[0_0_14px_rgba(56,189,248,0.8)]'
-                : 'bg-slate-800/60 text-slate-300 hover:text-cyan-300 border-slate-700/60'
-            }`}
-          >
-            <span>🌙 Moons</span>
-            <span className="text-[9px]">▼</span>
-          </button>
+          {universeSettings.showMoons && (
+            <button
+              onClick={() => setActiveMenuTab(activeMenuTab === 'moons' ? null : 'moons')}
+              className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1 border ${
+                activeMenuTab === 'moons'
+                  ? 'bg-cyan-500 text-black border-cyan-400 shadow-[0_0_14px_rgba(56,189,248,0.8)]'
+                  : 'bg-slate-800/60 text-slate-300 hover:text-cyan-300 border-slate-700/60'
+              }`}
+            >
+              <span>🌙 Moons</span>
+              <span className="text-[9px]">▼</span>
+            </button>
+          )}
+
+
 
           {/* Dwarf Planets Category Menu Toggle */}
-          <button
-            onClick={() => setActiveMenuTab(activeMenuTab === 'dwarfs' ? null : 'dwarfs')}
-            className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1 border ${
-              activeMenuTab === 'dwarfs'
-                ? 'bg-cyan-500 text-black border-cyan-400 shadow-[0_0_14px_rgba(56,189,248,0.8)]'
-                : 'bg-slate-800/60 text-slate-300 hover:text-cyan-300 border-slate-700/60'
-            }`}
-          >
-            <span>🔵 Dwarf Planets</span>
-            <span className="text-[9px]">▼</span>
-          </button>
+          {universeSettings.showDwarfPlanets && (
+            <button
+              onClick={() => setActiveMenuTab(activeMenuTab === 'dwarfs' ? null : 'dwarfs')}
+              className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1 border ${
+                activeMenuTab === 'dwarfs'
+                  ? 'bg-cyan-500 text-black border-cyan-400 shadow-[0_0_14px_rgba(56,189,248,0.8)]'
+                  : 'bg-slate-800/60 text-slate-300 hover:text-cyan-300 border-slate-700/60'
+              }`}
+            >
+              <span>🔵 Dwarf Planets</span>
+              <span className="text-[9px]">▼</span>
+            </button>
+          )}
 
           {/* Comets Category Menu Toggle */}
-          <button
-            onClick={() => setActiveMenuTab(activeMenuTab === 'comets' ? null : 'comets')}
-            className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1 border ${
-              activeMenuTab === 'comets'
-                ? 'bg-cyan-500 text-black border-cyan-400 shadow-[0_0_14px_rgba(56,189,248,0.8)]'
-                : 'bg-slate-800/60 text-slate-300 hover:text-cyan-300 border-slate-700/60'
-            }`}
-          >
-            <span>☄️ Comets</span>
-            <span className="text-[9px]">▼</span>
-          </button>
+          {universeSettings.showComets && (
+            <button
+              onClick={() => setActiveMenuTab(activeMenuTab === 'comets' ? null : 'comets')}
+              className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1 border ${
+                activeMenuTab === 'comets'
+                  ? 'bg-cyan-500 text-black border-cyan-400 shadow-[0_0_14px_rgba(56,189,248,0.8)]'
+                  : 'bg-slate-800/60 text-slate-300 hover:text-cyan-300 border-slate-700/60'
+              }`}
+            >
+              <span>☄️ Comets</span>
+              <span className="text-[9px]">▼</span>
+            </button>
+          )}
 
           {selectedPlanetName && (
             <button

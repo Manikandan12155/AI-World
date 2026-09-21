@@ -1,8 +1,42 @@
 import { useState, useEffect } from 'react';
-import { Search, Moon, Bot, X, Send, Activity, TrendingUp, Cpu, Compass } from 'lucide-react';
+import { Search, Moon, Bot, X, Send, Activity, TrendingUp, Cpu, Compass, Settings } from 'lucide-react';
 import { TECH_NODES_OVERLAY } from './data/overlayData';
 import type { TechNodeOverlay } from './data/overlayData';
 import { Master3DUniverseCanvas } from './three/Master3DUniverseCanvas';
+
+export interface UniverseSettings {
+  showPlanets: boolean;
+  showMoons: boolean;
+  showDwarfPlanets: boolean;
+  showComets: boolean;
+  showSatellites: boolean;
+  showAsteroids: boolean;
+  showOrbits: boolean;
+  showNames: boolean;
+}
+
+const CustomToggle = ({ checked, onChange }: { checked: boolean; onChange: (val: boolean) => void }) => {
+  return (
+    <div
+      onClick={() => onChange(!checked)}
+      className="relative w-14 h-7 rounded-full cursor-pointer bg-[#e8ecf1] shadow-[inset_0_3px_6px_rgba(0,0,0,0.15),inset_0_-3px_6px_rgba(255,255,255,1)] flex items-center shrink-0 border border-slate-300/50"
+    >
+      <div className="absolute w-full px-2 flex justify-between items-center text-[11px] font-extrabold tracking-wide pointer-events-none">
+        <span className={checked ? 'text-slate-400' : 'text-transparent'}>ON</span>
+        <span className={!checked ? 'text-slate-400' : 'text-transparent'}>OFF</span>
+      </div>
+      <div
+        className={`absolute w-6 h-6 rounded-full shadow-[0_2px_4px_rgba(0,0,0,0.3),inset_0_-2px_4px_rgba(0,0,0,0.2),inset_0_2px_4px_rgba(255,255,255,0.9)] transition-all duration-300 ease-out ${
+          checked 
+            ? 'translate-x-[30px] bg-gradient-to-br from-[#22c55e] to-[#15803d]' 
+            : 'translate-x-[2px] bg-gradient-to-br from-[#f8fafc] to-[#94a3b8]'
+        }`}
+      >
+        <div className={`absolute top-0.5 left-1.5 w-3 h-1.5 rounded-full blur-[1px] opacity-70 ${checked ? 'bg-white' : 'bg-white'}`} />
+      </div>
+    </div>
+  );
+};
 
 export function App() {
   const [selectedNode, setSelectedNode] = useState<TechNodeOverlay | null>(null);
@@ -10,6 +44,18 @@ export function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const [universeSettings, setUniverseSettings] = useState<UniverseSettings>({
+    showPlanets: true,
+    showMoons: true,
+    showDwarfPlanets: true,
+    showComets: true,
+    showSatellites: true,
+    showAsteroids: true,
+    showOrbits: true,
+    showNames: true,
+  });
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Keyboard shortcut '/'
   useEffect(() => {
@@ -86,6 +132,7 @@ export function App() {
       <Master3DUniverseCanvas
         selectedNode={selectedNode}
         onSelectNode={(node) => setSelectedNode(node)}
+        universeSettings={universeSettings}
       />
 
 
@@ -162,6 +209,69 @@ export function App() {
           >
             <Moon className="w-4 h-4" />
           </button>
+
+          {/* Universe Settings Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer border ${
+                isSettingsOpen 
+                  ? 'bg-cyan-900/80 text-cyan-300 border-cyan-500/60 shadow-[0_0_12px_rgba(34,211,238,0.4)]' 
+                  : 'bg-slate-900/80 text-slate-300 border-slate-800 hover:text-white hover:border-slate-700'
+              }`}
+              title="Universe Settings"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+
+            {isSettingsOpen && (
+              <div className="absolute top-12 right-0 w-64 bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 rounded-xl shadow-2xl p-4 flex flex-col gap-3 z-50">
+                <div className="text-xs font-semibold text-cyan-400 mb-1 px-1 tracking-wider uppercase border-b border-slate-700/50 pb-2">Universe Visibility</div>
+                
+                <label className="flex items-center justify-between px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors">
+                  <span className="text-sm font-medium text-slate-200">Planets</span>
+                  <CustomToggle checked={universeSettings.showPlanets} onChange={(val) => setUniverseSettings(s => ({ ...s, showPlanets: val }))} />
+                </label>
+                
+                <label className="flex items-center justify-between px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors">
+                  <span className="text-sm font-medium text-slate-200">Moons</span>
+                  <CustomToggle checked={universeSettings.showMoons} onChange={(val) => setUniverseSettings(s => ({ ...s, showMoons: val }))} />
+                </label>
+                
+                <label className="flex items-center justify-between px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors">
+                  <span className="text-sm font-medium text-slate-200">Dwarf Planets</span>
+                  <CustomToggle checked={universeSettings.showDwarfPlanets} onChange={(val) => setUniverseSettings(s => ({ ...s, showDwarfPlanets: val }))} />
+                </label>
+                
+                <label className="flex items-center justify-between px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors">
+                  <span className="text-sm font-medium text-slate-200">Comets</span>
+                  <CustomToggle checked={universeSettings.showComets} onChange={(val) => setUniverseSettings(s => ({ ...s, showComets: val }))} />
+                </label>
+
+                <label className="flex items-center justify-between px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors">
+                  <span className="text-sm font-medium text-slate-200">Satellites</span>
+                  <CustomToggle checked={universeSettings.showSatellites} onChange={(val) => setUniverseSettings(s => ({ ...s, showSatellites: val }))} />
+                </label>
+
+                <label className="flex items-center justify-between px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors">
+                  <span className="text-sm font-medium text-slate-200">Asteroids</span>
+                  <CustomToggle checked={universeSettings.showAsteroids} onChange={(val) => setUniverseSettings(s => ({ ...s, showAsteroids: val }))} />
+                </label>
+
+                <div className="h-px bg-slate-700/50 my-1"></div>
+
+                <label className="flex items-center justify-between px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors">
+                  <span className="text-sm font-medium text-slate-200">Orbit Lines</span>
+                  <CustomToggle checked={universeSettings.showOrbits} onChange={(val) => setUniverseSettings(s => ({ ...s, showOrbits: val }))} />
+                </label>
+
+                <label className="flex items-center justify-between px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors">
+                  <span className="text-sm font-medium text-slate-200 text-cyan-200">3D Labels (Names)</span>
+                  <CustomToggle checked={universeSettings.showNames} onChange={(val) => setUniverseSettings(s => ({ ...s, showNames: val }))} />
+                </label>
+              </div>
+            )}
+          </div>
 
           <button
             onClick={() => alert('NEXORIA Enterprise Single Sign-On Portal')}

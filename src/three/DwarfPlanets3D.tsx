@@ -19,6 +19,9 @@ interface DwarfPlanets3DProps {
   selectedPlanetName?: string | null;
   isSolarMode?: boolean;
   planetPositionsRef?: React.MutableRefObject<Record<string, PlanetViewInfo>>;
+  showNames?: boolean;
+  showOrbits?: boolean;
+  hasSelectedPlanet?: boolean;
 }
 
 // Single Dwarf Planet Mesh with Photorealistic Day/Night GLSL Shader & Texture Map
@@ -29,7 +32,9 @@ const SingleDwarfPlanet: React.FC<{
   hasSelectedPlanet: boolean;
   onSelectPlanet?: (name: string) => void;
   planetPositionsRef?: React.MutableRefObject<Record<string, PlanetViewInfo>>;
-}> = ({ data, isSelected, isSolarMode, hasSelectedPlanet, onSelectPlanet, planetPositionsRef }) => {
+  showNames?: boolean;
+  showOrbits?: boolean;
+}> = ({ data, isSelected, isSolarMode, hasSelectedPlanet, onSelectPlanet, planetPositionsRef, showNames = true, showOrbits = true }) => {
   const groupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
 
@@ -146,7 +151,7 @@ const SingleDwarfPlanet: React.FC<{
   return (
     <group>
       {/* Orbit Trajectory Line */}
-      {isSolarMode && !hasSelectedPlanet && <primitive object={orbitLineMesh} />}
+      {isSolarMode && !hasSelectedPlanet && showOrbits && <primitive object={orbitLineMesh} />}
 
       {/* 3D Dwarf Planet Mesh */}
       <group
@@ -170,17 +175,6 @@ const SingleDwarfPlanet: React.FC<{
           />
         </mesh>
 
-        {/* Outer subtle icy atmosphere halo */}
-        <mesh scale={1.12}>
-          <sphereGeometry args={[data.size, 16, 16]} />
-          <meshBasicMaterial
-            color={data.color}
-            transparent
-            opacity={0.12}
-            side={THREE.BackSide}
-            blending={THREE.AdditiveBlending}
-          />
-        </mesh>
 
         {/* Haumea Ring visualization if Haumea */}
         {data.isEllipsoid && (
@@ -196,27 +190,30 @@ const SingleDwarfPlanet: React.FC<{
           </mesh>
         )}
 
-        {/* Floating 3D HUD Tag */}
+        {/* Floating 3D Label Tag */}
+      {showNames && (
         <Html
-          position={[0, data.size + 0.5, 0]}
+          position={[0, data.size * 1.5 + 0.3, 0]}
           center
-          distanceFactor={isSelected ? 12 : 36}
-          className="pointer-events-auto select-none whitespace-nowrap"
+          distanceFactor={isSelected ? 10 : 25}
+          className={`pointer-events-auto select-none whitespace-nowrap transition-opacity duration-300 ${isSolarMode || isSelected ? 'opacity-100' : 'opacity-0'
+            }`}
         >
           <button
             onClick={(e) => {
               e.stopPropagation();
               onSelectPlanet?.(data.name);
             }}
-            className={`rounded-full border tracking-wider transition-all duration-300 cursor-pointer ${
-              isSelected
-                ? 'px-2 py-0.5 text-[8px] bg-slate-950/90 text-cyan-300 border-cyan-400/80 shadow-[0_0_8px_rgba(56,189,248,0.5)] scale-75'
-                : 'px-2 py-0.5 text-[9px] bg-black/80 text-slate-300 border-slate-600/40 shadow-[0_0_8px_rgba(148,163,184,0.4)] hover:border-cyan-400 hover:scale-105'
-            }`}
+            className={`group flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-semibold transition-all duration-300 cursor-pointer ${isSelected
+                ? 'bg-cyan-950/90 text-cyan-200 border border-cyan-400 shadow-[0_0_15px_rgba(56,189,248,0.7)] scale-110'
+                : 'bg-slate-900/80 text-slate-300 border border-slate-700/60 shadow-[0_4px_12px_rgba(0,0,0,0.6)] hover:border-cyan-500 hover:text-white hover:scale-105'
+              }`}
           >
-            🔵 {data.name.toUpperCase()}
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse inline-block" />
+            <span>{data.name}</span>
           </button>
         </Html>
+      )}
       </group>
     </group>
   );
@@ -227,6 +224,8 @@ export const DwarfPlanets3D: React.FC<DwarfPlanets3DProps> = ({
   selectedPlanetName,
   isSolarMode = false,
   planetPositionsRef,
+  showNames = true,
+  showOrbits = true,
 }) => {
   return (
     <group>
@@ -239,6 +238,8 @@ export const DwarfPlanets3D: React.FC<DwarfPlanets3DProps> = ({
           hasSelectedPlanet={!!selectedPlanetName}
           onSelectPlanet={onSelectPlanet}
           planetPositionsRef={planetPositionsRef}
+          showNames={showNames}
+          showOrbits={showOrbits}
         />
       ))}
     </group>

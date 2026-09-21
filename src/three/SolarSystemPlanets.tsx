@@ -15,6 +15,7 @@ interface SolarSystemProps {
   selectedPlanetName?: string | null;
   isSolarMode?: boolean;
   planetPositionsRef?: React.MutableRefObject<Record<string, PlanetViewInfo>>;
+  showMoons?: boolean;
 }
 
 // Fixed Sun position in space
@@ -83,7 +84,7 @@ const OrbitTrajectoryLine: React.FC<{
 };
 
 // Realistic 3D Procedural Asteroid Belt Component (High Performance 60FPS Instanced Space Rocks)
-const ProceduralAsteroidBelt: React.FC = () => {
+export const ProceduralAsteroidBelt: React.FC = () => {
   const meshRef1 = useRef<THREE.InstancedMesh>(null);
   const meshRef2 = useRef<THREE.InstancedMesh>(null);
   const meshRef3 = useRef<THREE.InstancedMesh>(null);
@@ -212,11 +213,14 @@ const ProceduralAsteroidBelt: React.FC = () => {
   );
 };
 
-export const SolarSystemPlanets: React.FC<SolarSystemProps> = ({
+export const SolarSystemPlanets: React.FC<SolarSystemProps & { showNames?: boolean; showOrbits?: boolean }> = ({
   onSelectPlanet,
   selectedPlanetName,
-  isSolarMode = false,
-  planetPositionsRef
+  isSolarMode = true,
+  planetPositionsRef,
+  showMoons = true,
+  showNames = true,
+  showOrbits = true,
 }) => {
   const mercuryRef = useRef<THREE.Group>(null);
   const venusRef = useRef<THREE.Group>(null);
@@ -876,88 +880,101 @@ export const SolarSystemPlanets: React.FC<SolarSystemProps> = ({
       {/* GLOWING PLANETARY ORBITAL TRAJECTORY LINES CIRCLING AROUND SUN    */}
       {/* ================================================================= */}
       {/* 1. Mercury Orbit Line */}
-      <OrbitTrajectoryLine
-        planetName="Mercury"
-        radius={8.5}
-        color="#94a3b8"
-        isSolarMode={isSolarMode}
-        isSelected={selectedPlanetName === 'Mercury'}
-        hasSelectedPlanet={!!selectedPlanetName}
-        onSelectPlanet={onSelectPlanet}
-      />
+      {showOrbits && (
+        <OrbitTrajectoryLine
+          planetName="Mercury"
+          radius={8.5}
+          color="#94a3b8"
+          isSolarMode={isSolarMode}
+          isSelected={selectedPlanetName === 'Mercury'}
+          hasSelectedPlanet={!!selectedPlanetName}
+          onSelectPlanet={onSelectPlanet}
+        />
+      )}
       {/* 2. Venus Orbit Line */}
-      <OrbitTrajectoryLine
-        planetName="Venus"
-        radius={16.5}
-        color="#fde047"
-        isSolarMode={isSolarMode}
-        isSelected={selectedPlanetName === 'Venus'}
-        hasSelectedPlanet={!!selectedPlanetName}
-        onSelectPlanet={onSelectPlanet}
-      />
+      {showOrbits && (
+        <OrbitTrajectoryLine
+          planetName="Venus"
+          radius={16.5}
+          color="#fde047"
+          isSolarMode={isSolarMode}
+          isSelected={selectedPlanetName === 'Venus'}
+          hasSelectedPlanet={!!selectedPlanetName}
+          onSelectPlanet={onSelectPlanet}
+        />
+      )}
       {/* 3. Earth Orbit Line */}
-      <OrbitTrajectoryLine
-        planetName="Earth"
-        radius={32.42}
-        color="#38bdf8"
-        isSolarMode={isSolarMode}
-        isSelected={selectedPlanetName === 'Earth'}
-        hasSelectedPlanet={!!selectedPlanetName}
-        onSelectPlanet={onSelectPlanet}
-      />
+      {showOrbits && (
+        <OrbitTrajectoryLine
+          planetName="Earth"
+          radius={22.5}
+          color="#38bdf8"
+          isSolarMode={isSolarMode}
+          isSelected={selectedPlanetName === 'Earth'}
+          hasSelectedPlanet={!!selectedPlanetName}
+          onSelectPlanet={onSelectPlanet}
+        />
+      )}
       {/* 4. Mars Orbit Line */}
-      <OrbitTrajectoryLine
-        planetName="Mars"
-        radius={45.0}
-        color="#ef4444"
-        isSolarMode={isSolarMode}
-        isSelected={selectedPlanetName === 'Mars'}
-        hasSelectedPlanet={!!selectedPlanetName}
-        onSelectPlanet={onSelectPlanet}
-      />
+      {showOrbits && (
+        <OrbitTrajectoryLine
+          planetName="Mars"
+          radius={30.0}
+          color="#ef4444"
+          isSolarMode={isSolarMode}
+          isSelected={selectedPlanetName === 'Mars'}
+          hasSelectedPlanet={!!selectedPlanetName}
+          onSelectPlanet={onSelectPlanet}
+        />
+      )}
       {/* 5. Jupiter Orbit Line */}
-      <OrbitTrajectoryLine
-        planetName="Jupiter"
-        radius={66.0}
-        color="#f59e0b"
-        isSolarMode={isSolarMode}
-        isSelected={selectedPlanetName === 'Jupiter'}
-        hasSelectedPlanet={!!selectedPlanetName}
-        onSelectPlanet={onSelectPlanet}
-      />
+      {showOrbits && (
+        <OrbitTrajectoryLine
+          planetName="Jupiter"
+          radius={55.0}
+          color="#f59e0b"
+          isSolarMode={isSolarMode}
+          isSelected={selectedPlanetName === 'Jupiter'}
+          hasSelectedPlanet={!!selectedPlanetName}
+          onSelectPlanet={onSelectPlanet}
+        />
+      )}
       {/* 6. Saturn Orbit Line */}
-      <OrbitTrajectoryLine
-        planetName="Saturn"
-        radius={88.0}
-        color="#eab308"
-        isSolarMode={isSolarMode}
-        isSelected={selectedPlanetName === 'Saturn'}
-        hasSelectedPlanet={!!selectedPlanetName}
-        onSelectPlanet={onSelectPlanet}
-      />
+      {showOrbits && (
+        <OrbitTrajectoryLine
+          planetName="Saturn"
+          radius={85.0}
+          color="#eab308"
+          isSolarMode={isSolarMode}
+          isSelected={selectedPlanetName === 'Saturn'}
+          hasSelectedPlanet={!!selectedPlanetName}
+          onSelectPlanet={onSelectPlanet}
+        />
+      )}
       {/* 7. Uranus Orbit Line */}
-      <OrbitTrajectoryLine
-        planetName="Uranus"
-        radius={108.0}
-        color="#06b6d4"
-        isSolarMode={isSolarMode}
-        isSelected={selectedPlanetName === 'Uranus'}
-        hasSelectedPlanet={!!selectedPlanetName}
-        onSelectPlanet={onSelectPlanet}
-      />
+      {showOrbits && (
+        <OrbitTrajectoryLine
+          planetName="Uranus"
+          radius={110.0}
+          color="#06b6d4"
+          isSolarMode={isSolarMode}
+          isSelected={selectedPlanetName === 'Uranus'}
+          hasSelectedPlanet={!!selectedPlanetName}
+          onSelectPlanet={onSelectPlanet}
+        />
+      )}
       {/* 8. Neptune Orbit Line */}
-      <OrbitTrajectoryLine
-        planetName="Neptune"
-        radius={128.0}
-        color="#0284c7"
-        isSolarMode={isSolarMode}
-        isSelected={selectedPlanetName === 'Neptune'}
-        hasSelectedPlanet={!!selectedPlanetName}
-        onSelectPlanet={onSelectPlanet}
-      />
-
-      {/* Real 3D Tumbling Asteroid Belt (350+ Craggy Space Rocks between Mars and Jupiter) */}
-      <ProceduralAsteroidBelt />
+      {showOrbits && (
+        <OrbitTrajectoryLine
+          planetName="Neptune"
+          radius={128.0}
+          color="#0284c7"
+          isSolarMode={isSolarMode}
+          isSelected={selectedPlanetName === 'Neptune'}
+          hasSelectedPlanet={!!selectedPlanetName}
+          onSelectPlanet={onSelectPlanet}
+        />
+      )}
 
 
       {/* ================================================================= */}
@@ -976,21 +993,23 @@ export const SolarSystemPlanets: React.FC<SolarSystemProps> = ({
           <sphereGeometry args={[0.45, 64, 64]} />
           <primitive object={mercuryShaderMaterial} attach="material" />
         </mesh>
-        <Html position={[0, 0.7, 0]} center distanceFactor={selectedPlanetName === 'Mercury' ? 12 : 28} className="pointer-events-auto select-none">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelectPlanet?.('Mercury');
-            }}
-            className={`rounded-full border tracking-wider whitespace-nowrap transition-all duration-300 cursor-pointer ${
-              selectedPlanetName === 'Mercury'
-                ? 'px-2 py-0.5 text-[8px] bg-slate-900/90 text-cyan-300 border-cyan-400/80 shadow-[0_0_8px_rgba(56,189,248,0.5)] scale-75'
-                : 'px-2 py-0.5 text-[9px] bg-black/80 text-slate-300 border-slate-500/40 shadow-[0_0_8px_rgba(148,163,184,0.4)] hover:border-cyan-400 hover:scale-105'
-            }`}
-          >
-            ☿ MERCURY
-          </button>
-        </Html>
+        {showNames && (
+          <Html position={[0, 0.7, 0]} center distanceFactor={selectedPlanetName === 'Mercury' ? 12 : 28} className="pointer-events-auto select-none">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectPlanet?.('Mercury');
+              }}
+              className={`rounded-full border tracking-wider whitespace-nowrap transition-all duration-300 cursor-pointer ${
+                selectedPlanetName === 'Mercury'
+                  ? 'px-2 py-0.5 text-[8px] bg-slate-900/90 text-cyan-300 border-cyan-400/80 shadow-[0_0_8px_rgba(56,189,248,0.5)] scale-75'
+                  : 'px-2 py-0.5 text-[9px] bg-black/80 text-slate-300 border-slate-500/40 shadow-[0_0_8px_rgba(148,163,184,0.4)] hover:border-cyan-400 hover:scale-105'
+              }`}
+            >
+              ☿ MERCURY
+            </button>
+          </Html>
+        )}
       </group>
 
       {/* 2. VENUS */}
@@ -1005,32 +1024,24 @@ export const SolarSystemPlanets: React.FC<SolarSystemProps> = ({
           <sphereGeometry args={[0.7, 64, 64]} />
           <primitive object={venusShaderMaterial} attach="material" />
         </mesh>
-        {/* Thick Venusian sulphuric acid cloud haze */}
-        <mesh>
-          <sphereGeometry args={[0.73, 32, 32]} />
-          <meshBasicMaterial
-            color="#d4a017"
-            transparent
-            opacity={0.12}
-            blending={THREE.AdditiveBlending}
-            side={THREE.BackSide}
-          />
-        </mesh>
-        <Html position={[0, 1.0, 0]} center distanceFactor={selectedPlanetName === 'Venus' ? 12 : 30} className="pointer-events-auto select-none">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelectPlanet?.('Venus');
-            }}
-            className={`rounded-full border tracking-wider whitespace-nowrap transition-all duration-300 cursor-pointer ${
-              selectedPlanetName === 'Venus'
-                ? 'px-2 py-0.5 text-[8px] bg-yellow-950/90 text-yellow-200 border-yellow-400/80 shadow-[0_0_8px_rgba(253,224,71,0.5)] scale-75'
-                : 'px-2 py-0.5 text-[10px] bg-black/80 text-yellow-200 border-yellow-400/40 shadow-[0_0_10px_rgba(253,224,71,0.4)] hover:border-yellow-400 hover:scale-105'
-            }`}
-          >
-            ♀ VENUS
-          </button>
-        </Html>
+
+        {showNames && (
+          <Html position={[0, 1.0, 0]} center distanceFactor={selectedPlanetName === 'Venus' ? 12 : 30} className="pointer-events-auto select-none">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectPlanet?.('Venus');
+              }}
+              className={`rounded-full border tracking-wider whitespace-nowrap transition-all duration-300 cursor-pointer ${
+                selectedPlanetName === 'Venus'
+                  ? 'px-2 py-0.5 text-[8px] bg-yellow-950/90 text-yellow-200 border-yellow-400/80 shadow-[0_0_8px_rgba(253,224,71,0.5)] scale-75'
+                  : 'px-2 py-0.5 text-[10px] bg-black/80 text-yellow-200 border-yellow-400/40 shadow-[0_0_10px_rgba(253,224,71,0.4)] hover:border-yellow-400 hover:scale-105'
+              }`}
+            >
+              ♀ VENUS
+            </button>
+          </Html>
+        )}
       </group>
 
       {/* 3. MARS (Red Planet) */}
@@ -1045,35 +1056,30 @@ export const SolarSystemPlanets: React.FC<SolarSystemProps> = ({
           <sphereGeometry args={[0.78, 64, 64]} />
           <primitive object={marsShaderMaterial} attach="material" />
         </mesh>
-        <mesh>
-          <sphereGeometry args={[0.81, 32, 32]} />
-          <meshBasicMaterial
-            color="#f97316"
-            transparent
-            opacity={0.14}
-            blending={THREE.AdditiveBlending}
-            side={THREE.BackSide}
-          />
-        </mesh>
+
 
         {/* 3D Moons of Mars (Phobos & Deimos) */}
-        <PlanetMoons3DGroup planetName="Mars" isFocused={selectedPlanetName === 'Mars'} planetPositionsRef={planetPositionsRef} />
+        {showMoons && (
+          <PlanetMoons3DGroup planetName="Mars" isFocused={selectedPlanetName === 'Mars'} planetPositionsRef={planetPositionsRef as any} showNames={showNames} showOrbits={showOrbits} />
+        )}
 
-        <Html position={[0, 1.15, 0]} center distanceFactor={selectedPlanetName === 'Mars' ? 13 : 32} className="pointer-events-auto select-none">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelectPlanet?.('Mars');
-            }}
-            className={`rounded-full border tracking-wider whitespace-nowrap transition-all duration-300 cursor-pointer ${
-              selectedPlanetName === 'Mars'
-                ? 'px-2 py-0.5 text-[8px] bg-red-950/90 text-red-200 border-red-400/80 shadow-[0_0_8px_rgba(239,68,68,0.5)] scale-75'
-                : 'px-2 py-0.5 text-[10px] bg-black/80 text-red-300 border-red-500/40 shadow-[0_0_10px_rgba(239,68,68,0.5)] hover:border-red-400 hover:scale-105'
-            }`}
-          >
-            ♂ MARS
-          </button>
-        </Html>
+        {showNames && (
+          <Html position={[0, 1.15, 0]} center distanceFactor={selectedPlanetName === 'Mars' ? 13 : 32} className="pointer-events-auto select-none">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectPlanet?.('Mars');
+              }}
+              className={`rounded-full border tracking-wider whitespace-nowrap transition-all duration-300 cursor-pointer ${
+                selectedPlanetName === 'Mars'
+                  ? 'px-2 py-0.5 text-[8px] bg-red-950/90 text-red-200 border-red-400/80 shadow-[0_0_8px_rgba(239,68,68,0.5)] scale-75'
+                  : 'px-2 py-0.5 text-[10px] bg-black/80 text-red-300 border-red-500/40 shadow-[0_0_10px_rgba(239,68,68,0.5)] hover:border-red-400 hover:scale-105'
+              }`}
+            >
+              ♂ MARS
+            </button>
+          </Html>
+        )}
       </group>
 
       {/* 4. JUPITER (Gas Giant) */}
@@ -1088,35 +1094,30 @@ export const SolarSystemPlanets: React.FC<SolarSystemProps> = ({
           <sphereGeometry args={[2.2, 64, 64]} />
           <primitive object={jupiterShaderMaterial} attach="material" />
         </mesh>
-        <mesh>
-          <sphereGeometry args={[2.32, 32, 32]} />
-          <meshBasicMaterial
-            color="#f59e0b"
-            transparent
-            opacity={0.15}
-            blending={THREE.AdditiveBlending}
-            side={THREE.BackSide}
-          />
-        </mesh>
+
 
         {/* 3D Moons of Jupiter (Ganymede, Callisto, Io, Europa, Amalthea + 58 Swarm Moons) */}
-        <PlanetMoons3DGroup planetName="Jupiter" isFocused={selectedPlanetName === 'Jupiter'} planetPositionsRef={planetPositionsRef} />
+        {showMoons && (
+          <PlanetMoons3DGroup planetName="Jupiter" isFocused={selectedPlanetName === 'Jupiter'} planetPositionsRef={planetPositionsRef as any} showNames={showNames} showOrbits={showOrbits} />
+        )}
 
-        <Html position={[0, 2.7, 0]} center distanceFactor={selectedPlanetName === 'Jupiter' ? 14 : 38} className="pointer-events-auto select-none">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelectPlanet?.('Jupiter');
-            }}
-            className={`rounded-full border tracking-wider whitespace-nowrap transition-all duration-300 cursor-pointer ${
-              selectedPlanetName === 'Jupiter'
-                ? 'px-2.5 py-0.5 text-[9px] bg-amber-950/90 text-amber-200 border-amber-400/80 shadow-[0_0_8px_rgba(245,158,11,0.5)] scale-75'
-                : 'px-2 py-0.5 text-[11px] bg-black/80 text-amber-300 border-amber-500/40 shadow-[0_0_14px_rgba(245,158,11,0.6)] hover:border-amber-400 hover:scale-105'
-            }`}
-          >
-            ♃ JUPITER
-          </button>
-        </Html>
+        {showNames && (
+          <Html position={[0, 2.7, 0]} center distanceFactor={selectedPlanetName === 'Jupiter' ? 14 : 38} className="pointer-events-auto select-none">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectPlanet?.('Jupiter');
+              }}
+              className={`rounded-full border tracking-wider whitespace-nowrap transition-all duration-300 cursor-pointer ${
+                selectedPlanetName === 'Jupiter'
+                  ? 'px-2.5 py-0.5 text-[9px] bg-amber-950/90 text-amber-200 border-amber-400/80 shadow-[0_0_8px_rgba(245,158,11,0.5)] scale-75'
+                  : 'px-2 py-0.5 text-[11px] bg-black/80 text-amber-300 border-amber-500/40 shadow-[0_0_14px_rgba(245,158,11,0.6)] hover:border-amber-400 hover:scale-105'
+              }`}
+            >
+              ♃ JUPITER
+            </button>
+          </Html>
+        )}
       </group>
 
       {/* 5. SATURN (With Tilted Rings) */}
@@ -1145,23 +1146,27 @@ export const SolarSystemPlanets: React.FC<SolarSystemProps> = ({
         </mesh>
 
         {/* 3D Moons of Saturn (Titan, Enceladus, Mimas, Rhea, Iapetus + 229 Swarm Moons) */}
-        <PlanetMoons3DGroup planetName="Saturn" isFocused={selectedPlanetName === 'Saturn'} planetPositionsRef={planetPositionsRef} />
+        {showMoons && (
+          <PlanetMoons3DGroup planetName="Saturn" isFocused={selectedPlanetName === 'Saturn'} planetPositionsRef={planetPositionsRef as any} showNames={showNames} showOrbits={showOrbits} />
+        )}
 
-        <Html position={[0, 2.4, 0]} center distanceFactor={selectedPlanetName === 'Saturn' ? 14 : 44} className="pointer-events-auto select-none">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelectPlanet?.('Saturn');
-            }}
-            className={`rounded-full border tracking-wider whitespace-nowrap transition-all duration-300 cursor-pointer ${
-              selectedPlanetName === 'Saturn'
-                ? 'px-2.5 py-0.5 text-[9px] bg-yellow-950/90 text-yellow-200 border-yellow-400/80 shadow-[0_0_8px_rgba(234,179,8,0.5)] scale-75'
-                : 'px-2 py-0.5 text-[11px] bg-black/80 text-yellow-200 border-yellow-500/40 shadow-[0_0_14px_rgba(234,179,8,0.6)] hover:border-yellow-400 hover:scale-105'
-            }`}
-          >
-            ♄ SATURN
-          </button>
-        </Html>
+        {showNames && (
+          <Html position={[0, 2.4, 0]} center distanceFactor={selectedPlanetName === 'Saturn' ? 14 : 44} className="pointer-events-auto select-none">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectPlanet?.('Saturn');
+              }}
+              className={`rounded-full border tracking-wider whitespace-nowrap transition-all duration-300 cursor-pointer ${
+                selectedPlanetName === 'Saturn'
+                  ? 'px-2.5 py-0.5 text-[9px] bg-yellow-950/90 text-yellow-200 border-yellow-400/80 shadow-[0_0_8px_rgba(234,179,8,0.5)] scale-75'
+                  : 'px-2 py-0.5 text-[11px] bg-black/80 text-yellow-200 border-yellow-500/40 shadow-[0_0_14px_rgba(234,179,8,0.6)] hover:border-yellow-400 hover:scale-105'
+              }`}
+            >
+              ♄ SATURN
+            </button>
+          </Html>
+        )}
       </group>
 
       {/* 6. URANUS (Cyan Ice Giant) */}
@@ -1176,16 +1181,7 @@ export const SolarSystemPlanets: React.FC<SolarSystemProps> = ({
           <sphereGeometry args={[1.35, 64, 64]} />
           <primitive object={uranusShaderMaterial} attach="material" />
         </mesh>
-        <mesh>
-          <sphereGeometry args={[1.43, 24, 24]} />
-          <meshBasicMaterial
-            color="#06b6d4"
-            transparent
-            opacity={0.22}
-            blending={THREE.AdditiveBlending}
-            side={THREE.BackSide}
-          />
-        </mesh>
+
 
         {/* Uranus Vertical Tilted 3D Ring System */}
         <mesh rotation={[Math.PI / 2.2, 0.4, 0]}>
@@ -1200,23 +1196,27 @@ export const SolarSystemPlanets: React.FC<SolarSystemProps> = ({
         </mesh>
 
         {/* 3D Moons of Uranus (Titania, Oberon, Ariel, Umbriel, Miranda + Swarm) */}
-        <PlanetMoons3DGroup planetName="Uranus" isFocused={selectedPlanetName === 'Uranus'} planetPositionsRef={planetPositionsRef} />
+        {showMoons && (
+          <PlanetMoons3DGroup planetName="Uranus" isFocused={selectedPlanetName === 'Uranus'} planetPositionsRef={planetPositionsRef as any} showNames={showNames} showOrbits={showOrbits} />
+        )}
 
-        <Html position={[0, 1.8, 0]} center distanceFactor={selectedPlanetName === 'Uranus' ? 13 : 48} className="pointer-events-auto select-none">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelectPlanet?.('Uranus');
-            }}
-            className={`rounded-full border tracking-wider whitespace-nowrap transition-all duration-300 cursor-pointer ${
-              selectedPlanetName === 'Uranus'
-                ? 'px-2.5 py-0.5 text-[8px] bg-cyan-950/90 text-cyan-200 border-cyan-400/80 shadow-[0_0_8px_rgba(6,182,212,0.5)] scale-75'
-                : 'px-2 py-0.5 text-[11px] bg-black/80 text-cyan-300 border-cyan-500/40 shadow-[0_0_14px_rgba(6,182,212,0.6)] hover:border-cyan-400 hover:scale-105'
-            }`}
-          >
-            ♅ URANUS
-          </button>
-        </Html>
+        {showNames && (
+          <Html position={[0, 1.8, 0]} center distanceFactor={selectedPlanetName === 'Uranus' ? 13 : 48} className="pointer-events-auto select-none">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectPlanet?.('Uranus');
+              }}
+              className={`rounded-full border tracking-wider whitespace-nowrap transition-all duration-300 cursor-pointer ${
+                selectedPlanetName === 'Uranus'
+                  ? 'px-2.5 py-0.5 text-[8px] bg-cyan-950/90 text-cyan-200 border-cyan-400/80 shadow-[0_0_8px_rgba(6,182,212,0.5)] scale-75'
+                  : 'px-2 py-0.5 text-[11px] bg-black/80 text-cyan-300 border-cyan-500/40 shadow-[0_0_14px_rgba(6,182,212,0.6)] hover:border-cyan-400 hover:scale-105'
+              }`}
+            >
+              ♅ URANUS
+            </button>
+          </Html>
+        )}
       </group>
 
       {/* 7. NEPTUNE (Ice Giant) */}
@@ -1231,16 +1231,7 @@ export const SolarSystemPlanets: React.FC<SolarSystemProps> = ({
           <sphereGeometry args={[1.2, 64, 64]} />
           <primitive object={neptuneShaderMaterial} attach="material" />
         </mesh>
-        <mesh>
-          <sphereGeometry args={[1.28, 24, 24]} />
-          <meshBasicMaterial
-            color="#38bdf8"
-            transparent
-            opacity={0.25}
-            blending={THREE.AdditiveBlending}
-            side={THREE.BackSide}
-          />
-        </mesh>
+
 
         {/* Neptune Faint Icy 3D Ring System */}
         <mesh rotation={[Math.PI / 3, 0.1, 0]}>
@@ -1255,23 +1246,27 @@ export const SolarSystemPlanets: React.FC<SolarSystemProps> = ({
         </mesh>
 
         {/* 3D Moons of Neptune (Triton, Nereid, Proteus + Swarm) */}
-        <PlanetMoons3DGroup planetName="Neptune" isFocused={selectedPlanetName === 'Neptune'} planetPositionsRef={planetPositionsRef} />
+        {showMoons && (
+          <PlanetMoons3DGroup planetName="Neptune" isFocused={selectedPlanetName === 'Neptune'} planetPositionsRef={planetPositionsRef as any} showNames={showNames} showOrbits={showOrbits} />
+        )}
 
-        <Html position={[0, 1.6, 0]} center distanceFactor={selectedPlanetName === 'Neptune' ? 13 : 50} className="pointer-events-auto select-none">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelectPlanet?.('Neptune');
-            }}
-            className={`rounded-full border tracking-wider whitespace-nowrap transition-all duration-300 cursor-pointer ${
-              selectedPlanetName === 'Neptune'
-                ? 'px-2.5 py-0.5 text-[8px] bg-sky-950/90 text-sky-200 border-sky-400/80 shadow-[0_0_8px_rgba(56,189,248,0.5)] scale-75'
-                : 'px-2 py-0.5 text-[11px] bg-black/80 text-sky-300 border-sky-500/40 shadow-[0_0_14px_rgba(56,189,248,0.6)] hover:border-sky-400 hover:scale-105'
-            }`}
-          >
-            ♆ NEPTUNE
-          </button>
-        </Html>
+        {showNames && (
+          <Html position={[0, 1.6, 0]} center distanceFactor={selectedPlanetName === 'Neptune' ? 13 : 50} className="pointer-events-auto select-none">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectPlanet?.('Neptune');
+              }}
+              className={`rounded-full border tracking-wider whitespace-nowrap transition-all duration-300 cursor-pointer ${
+                selectedPlanetName === 'Neptune'
+                  ? 'px-2.5 py-0.5 text-[8px] bg-sky-950/90 text-sky-200 border-sky-400/80 shadow-[0_0_8px_rgba(56,189,248,0.5)] scale-75'
+                  : 'px-2 py-0.5 text-[11px] bg-black/80 text-sky-300 border-sky-500/40 shadow-[0_0_14px_rgba(56,189,248,0.6)] hover:border-sky-400 hover:scale-105'
+              }`}
+            >
+              ♆ NEPTUNE
+            </button>
+          </Html>
+        )}
       </group>
     </group>
   );

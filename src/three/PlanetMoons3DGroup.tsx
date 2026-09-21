@@ -11,7 +11,7 @@ export const EARTH_SUN_POSITION = new THREE.Vector3(26, 14, 14);
 export interface PlanetMoons3DProps {
   planetName: string;
   isFocused?: boolean;
-  planetPositionsRef?: React.MutableRefObject<Record<string, { pos: THREE.Vector3; viewDist: number }>>;
+  planetPositionsRef?: React.MutableRefObject<Record<string, { pos: THREE.Vector3; viewDist: number; parentPos?: THREE.Vector3 }>>;
 }
 
 // Shader material for textured major moons (uses moon.dayTexture and optional nightTexture)
@@ -164,8 +164,10 @@ const ColoredMoonMesh: React.FC<{ moon: MoonData }> = ({ moon }) => {
 const SingleMoon3DMesh: React.FC<{
   moon: MoonData;
   isFocused?: boolean;
-  planetPositionsRef?: React.MutableRefObject<Record<string, { pos: THREE.Vector3; viewDist: number }>>;
-}> = ({ moon, isFocused, planetPositionsRef }) => {
+  planetPositionsRef?: React.MutableRefObject<Record<string, { pos: THREE.Vector3; viewDist: number; parentPos?: THREE.Vector3 }>>;
+  showNames?: boolean;
+  showOrbits?: boolean;
+}> = ({ moon, isFocused, planetPositionsRef, showNames = true, showOrbits = true }) => {
   const moonRef = useRef<THREE.Group>(null);
   const moonGroupRef = useRef<THREE.Group>(null);
 
@@ -175,30 +177,44 @@ const SingleMoon3DMesh: React.FC<{
       moonRef.current.rotation.y += delta * moon.speed;
     }
 
-    if (moonGroupRef.current && planetPositionsRef) {
+    if (moonGroupRef.current && moonRef.current && planetPositionsRef) {
       const worldPos = new THREE.Vector3();
       moonGroupRef.current.getWorldPosition(worldPos);
+      
+      const parentWorldPos = new THREE.Vector3();
+      moonRef.current.getWorldPosition(parentWorldPos);
+
       planetPositionsRef.current[moon.name] = {
         pos: worldPos,
+        parentPos: parentWorldPos,
         viewDist: Math.max(1.8, moon.size * 5.0 + 1.2),
       };
     }
   });
 
+  // Create sharp glowing orbit line for the moon
+  const orbitLineMesh = useMemo(() => {
+    const pts = [];
+    const segments = 128;
+    for (let i = 0; i <= segments; i++) {
+      const theta = (i / segments) * Math.PI * 2;
+      pts.push(new THREE.Vector3(Math.cos(theta) * moon.radiusOffset, 0, Math.sin(theta) * moon.radiusOffset));
+    }
+    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+    const mat = new THREE.LineBasicMaterial({
+      color: new THREE.Color(moon.color),
+      transparent: true,
+      opacity: 0.65,
+      blending: THREE.AdditiveBlending,
+    });
+    return new THREE.Line(geo, mat);
+  }, [moon.radiusOffset, moon.color]);
+
   return (
     <group ref={moonRef} rotation={[0, 0, 0]}>
-      {/* Orbit ring visualization (visible when planet is focused/selected) */}
-      {isFocused && (
-        <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[moon.radiusOffset - 0.015, moon.radiusOffset + 0.015, 64]} />
-          <meshBasicMaterial
-            color={moon.color}
-            transparent
-            opacity={0.35}
-            side={THREE.DoubleSide}
-            blending={THREE.AdditiveBlending}
-          />
-        </mesh>
+      {/* Crisp glowing orbit line (visible when planet is focused/selected) */}
+      {isFocused && showOrbits && (
+        <primitive object={orbitLineMesh} />
       )}
 
       {/* 3D Moon Mesh positioned at radiusOffset */}
@@ -209,28 +225,17 @@ const SingleMoon3DMesh: React.FC<{
           <ColoredMoonMesh moon={moon} />
         )}
 
-        {/* Outer Glow Halo for Moon */}
-        <mesh scale={1.15}>
-          <sphereGeometry args={[moon.size, 16, 16]} />
-          <meshBasicMaterial
-            color={moon.color}
-            transparent
-            opacity={0.15}
-            side={THREE.BackSide}
-            blending={THREE.AdditiveBlending}
-          />
-        </mesh>
 
-        {/* Floating 3D Label Tag (Shows when planet is focused/selected or zoomed) */}
-        {isFocused && (
+        {/* Floating 3D Label Tag */}
+        {showNames && (
           <Html
-            position={[0, moon.size + 0.25, 0]}
+            position={[0, moon.size + 0.15, 0]}
             center
-            distanceFactor={10}
-            className="pointer-events-none select-none whitespace-nowrap"
+            distanceFactor={isFocused ? 14 : 35}
+            className={`pointer-events-none select-none whitespace-nowrap transition-opacity duration-300 ${isFocused ? 'opacity-100' : 'opacity-0'
+              }`}
           >
-            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#050c1a]/90 backdrop-blur-md border border-cyan-400/60 shadow-[0_0_12px_rgba(56,189,248,0.5)] text-[9px] text-slate-100 font-semibold font-['Space_Grotesk']">
-              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/60 border border-slate-700/80 shadow-[0_2px_8px_rgba(0,0,0,0.8)] text-[7px] text-slate-300 font-semibold tracking-wide">
               <span>{moon.name}</span>
             </div>
           </Html>
@@ -311,7 +316,7 @@ const AutonomousMoonsSwarm: React.FC<{
     return Array.from({ length: count }, () => {
       const radius = baseRadius + (Math.random() - 0.2) * 2.2;
       const angle = Math.random() * Math.PI * 2;
-      const speed = (0.04 + Math.random() * 0.08) * (Math.random() > 0.4 ? 1 : -1);
+      const speed = (0.004 + Math.random() * 0.008) * (Math.random() > 0.4 ? 1 : -1);
       const scale = 0.09 + Math.random() * 0.08;
       return { radius, angle, speed, scale };
     });
@@ -343,7 +348,13 @@ const AutonomousMoonsSwarm: React.FC<{
   );
 };
 
-export const PlanetMoons3DGroup: React.FC<PlanetMoons3DProps> = ({ planetName, isFocused, planetPositionsRef }) => {
+export const PlanetMoons3DGroup: React.FC<{
+  planetName: string;
+  isFocused?: boolean;
+  planetPositionsRef?: React.MutableRefObject<Record<string, { pos: THREE.Vector3; viewDist: number; parentPos?: THREE.Vector3 }>>;
+  showNames?: boolean;
+  showOrbits?: boolean;
+}> = ({ planetName, isFocused = false, planetPositionsRef, showNames = true, showOrbits = true }) => {
   const data = PLANET_MOONS_DATA[planetName];
   if (!data || data.totalMoons === 0) return null;
 
@@ -351,7 +362,14 @@ export const PlanetMoons3DGroup: React.FC<PlanetMoons3DProps> = ({ planetName, i
     <group>
       {/* 1. Major Named Moons */}
       {data.majorMoons.map((moon) => (
-        <SingleMoon3DMesh key={moon.name} moon={moon} isFocused={isFocused} planetPositionsRef={planetPositionsRef} />
+        <SingleMoon3DMesh
+          key={moon.name}
+          moon={moon}
+          isFocused={isFocused}
+          planetPositionsRef={planetPositionsRef}
+          showNames={showNames}
+          showOrbits={showOrbits}
+        />
       ))}
 
       {/* 2. Autonomous / Provisional Small Outer Moons Swarm */}

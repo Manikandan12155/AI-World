@@ -11,8 +11,11 @@ import { PlanetMoons3DGroup } from './PlanetMoons3DGroup';
 
 export const PhotorealisticEarth: React.FC<{
   isFocused?: boolean;
-  planetPositionsRef?: React.MutableRefObject<Record<string, { pos: THREE.Vector3; viewDist: number }>>;
-}> = ({ isFocused = true, planetPositionsRef }) => {
+  planetPositionsRef?: React.MutableRefObject<Record<string, { pos: THREE.Vector3; viewDist: number; parentPos?: THREE.Vector3 }>>;
+  showMoons?: boolean;
+  showNames?: boolean;
+  showOrbits?: boolean;
+}> = ({ isFocused = true, planetPositionsRef, showMoons = true, showNames = true, showOrbits = true }) => {
   const earthRef = useRef<THREE.Mesh>(null);
   const atmosphereRef = useRef<THREE.Mesh>(null);
 
@@ -138,24 +141,28 @@ export const PhotorealisticEarth: React.FC<{
       </mesh>
 
       {/* 4. Earth's Moon (Luna) Orbit Group */}
-      <PlanetMoons3DGroup planetName="Earth" isFocused={isFocused} planetPositionsRef={planetPositionsRef} />
+      {showMoons && (
+        <PlanetMoons3DGroup planetName="Earth" isFocused={isFocused} planetPositionsRef={planetPositionsRef as any} showNames={showNames} showOrbits={showOrbits} />
+      )}
 
       {/* 5. Exact Center Slogan: "Mani Tech UNIVERSE" */}
-      <Html
-        position={[0, 0.45, 2.65]}
-        center
-        distanceFactor={6.5}
-        className="pointer-events-none select-none z-10"
-      >
-        <div className="flex flex-col items-center justify-center text-center">
-          <span className="text-[12px] tracking-[0.55em] text-cyan-200 font-medium uppercase drop-shadow-[0_0_15px_rgba(56,189,248,0.9)]">
-            Mani Tech
-          </span>
-          <span className="text-lg md:text-xl tracking-[0.65em] text-white font-extrabold uppercase drop-shadow-[0_0_24px_rgba(56,189,248,1)] mt-1 whitespace-nowrap pl-1">
-            UNIVERSE
-          </span>
-        </div>
-      </Html>
+      {showNames && (
+        <Html
+          position={[0, 0.45, 2.65]}
+          center
+          distanceFactor={6.5}
+          className="pointer-events-none select-none z-10"
+        >
+          <div className="flex flex-col items-center justify-center text-center">
+            <span className="text-[12px] tracking-[0.55em] text-cyan-200 font-medium uppercase drop-shadow-[0_0_15px_rgba(56,189,248,0.9)]">
+              Mani Tech
+            </span>
+            <span className="text-lg md:text-xl tracking-[0.65em] text-white font-extrabold uppercase drop-shadow-[0_0_24px_rgba(56,189,248,1)] mt-1 whitespace-nowrap pl-1">
+              UNIVERSE
+            </span>
+          </div>
+        </Html>
+      )}
     </group>
   );
 };
