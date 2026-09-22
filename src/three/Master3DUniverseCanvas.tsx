@@ -87,6 +87,7 @@ interface MasterUniverseProps {
   selectedNode: TechNodeOverlay | null;
   onSelectNode: (node: TechNodeOverlay) => void;
   universeSettings: UniverseSettings;
+  isAnyModalOpen?: boolean;
 }
 
 // Controller to smoothly animate OrbitControls target when a node or planet is clicked
@@ -715,6 +716,7 @@ const Realistic3DSatellite: React.FC<{
           position={[0, 0.36, 0]}
           center
           distanceFactor={7.2}
+          zIndexRange={[10, 0]}
           className="pointer-events-auto select-none"
         >
           <button
@@ -741,7 +743,8 @@ const Realistic3DSatellite: React.FC<{
 export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
   selectedNode,
   onSelectNode,
-  universeSettings
+  universeSettings,
+  isAnyModalOpen = false
 }) => {
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const planetPositionsRef = useRef<Record<string, { pos: THREE.Vector3; viewDist: number; parentPos?: THREE.Vector3 }>>({});
@@ -750,6 +753,8 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeMenuTab, setActiveMenuTab] = useState<'planets' | 'moons' | 'dwarfs' | 'comets' | 'satellites' | null>(null);
+
+  const effectiveShowNames = universeSettings.showNames && !isAnyModalOpen;
 
   return (
     <div className="absolute inset-0 w-full h-full pointer-events-auto cursor-grab active:cursor-grabbing">
@@ -786,7 +791,7 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
 
           <CinematicSpaceBackdrop showSun={universeSettings.showSun !== false} />
           {universeSettings.showEarth !== false && (
-            <PhotorealisticEarth isFocused={selectedPlanetName === 'Earth' || (!selectedPlanetName && viewMode === 'earth')} planetPositionsRef={planetPositionsRef} showMoons={universeSettings.showMoons} showNames={universeSettings.showNames} showOrbits={universeSettings.showOrbits} />
+            <PhotorealisticEarth isFocused={selectedPlanetName === 'Earth' || (!selectedPlanetName && viewMode === 'earth')} planetPositionsRef={planetPositionsRef} showMoons={universeSettings.showMoons} showNames={effectiveShowNames} showOrbits={universeSettings.showOrbits} />
           )}
           
           {universeSettings.showOrbits && (
@@ -803,7 +808,7 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
               isSolarMode={viewMode === 'solarsystem'}
               planetPositionsRef={planetPositionsRef}
               showMoons={universeSettings.showMoons}
-              showNames={universeSettings.showNames}
+              showNames={effectiveShowNames}
               showOrbits={universeSettings.showOrbits}
             />
           )}
@@ -818,13 +823,13 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
               isSolarMode={viewMode === 'solarsystem'}
               hasSelectedPlanet={!!selectedPlanetName}
               planetPositionsRef={planetPositionsRef}
-              showNames={universeSettings.showNames}
+              showNames={effectiveShowNames}
               showOrbits={universeSettings.showOrbits}
             />
           )}
 
           {universeSettings.showComets && (
-            <Comets3D isSolarMode={viewMode === 'solarsystem'} planetPositionsRef={planetPositionsRef} showNames={universeSettings.showNames} />
+            <Comets3D isSolarMode={viewMode === 'solarsystem'} planetPositionsRef={planetPositionsRef} showNames={effectiveShowNames} />
           )}
 
           {/* 3D Trans-Neptunian Kuiper Belt, Outer Oort Cloud Shell & Main Asteroid Belt */}
@@ -850,7 +855,7 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
                   setSelectedPlanetName(null);
                   onSelectNode(n);
                 }}
-                showNames={universeSettings.showNames}
+                showNames={effectiveShowNames}
               />
             );
           })}

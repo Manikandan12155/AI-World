@@ -151,7 +151,8 @@ export const PhotorealisticEarth: React.FC<{
           position={[0, 0.45, 2.65]}
           center
           distanceFactor={6.5}
-          className="pointer-events-none select-none z-10"
+          zIndexRange={[10, 0]}
+          className="pointer-events-none select-none"
         >
           <div className="flex flex-col items-center justify-center text-center">
             <span className="text-[12px] tracking-[0.55em] text-cyan-200 font-medium uppercase drop-shadow-[0_0_15px_rgba(56,189,248,0.9)]">

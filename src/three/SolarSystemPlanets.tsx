@@ -994,7 +994,7 @@ export const SolarSystemPlanets: React.FC<SolarSystemProps & { showNames?: boole
           <primitive object={mercuryShaderMaterial} attach="material" />
         </mesh>
         {showNames && (
-          <Html position={[0, 0.7, 0]} center distanceFactor={selectedPlanetName === 'Mercury' ? 12 : 28} className="pointer-events-auto select-none">
+          <Html position={[0, 0.7, 0]} center distanceFactor={selectedPlanetName === 'Mercury' ? 12 : 28} zIndexRange={[10, 0]} className="pointer-events-auto select-none">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -1026,7 +1026,7 @@ export const SolarSystemPlanets: React.FC<SolarSystemProps & { showNames?: boole
         </mesh>
 
         {showNames && (
-          <Html position={[0, 1.0, 0]} center distanceFactor={selectedPlanetName === 'Venus' ? 12 : 30} className="pointer-events-auto select-none">
+          <Html position={[0, 1.0, 0]} center distanceFactor={selectedPlanetName === 'Venus' ? 12 : 30} zIndexRange={[10, 0]} className="pointer-events-auto select-none">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -1064,7 +1064,7 @@ export const SolarSystemPlanets: React.FC<SolarSystemProps & { showNames?: boole
         )}
 
         {showNames && (
-          <Html position={[0, 1.15, 0]} center distanceFactor={selectedPlanetName === 'Mars' ? 13 : 32} className="pointer-events-auto select-none">
+          <Html position={[0, 1.15, 0]} center distanceFactor={selectedPlanetName === 'Mars' ? 13 : 32} zIndexRange={[10, 0]} className="pointer-events-auto select-none">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -1102,7 +1102,7 @@ export const SolarSystemPlanets: React.FC<SolarSystemProps & { showNames?: boole
         )}
 
         {showNames && (
-          <Html position={[0, 2.7, 0]} center distanceFactor={selectedPlanetName === 'Jupiter' ? 14 : 38} className="pointer-events-auto select-none">
+          <Html position={[0, 2.7, 0]} center distanceFactor={selectedPlanetName === 'Jupiter' ? 14 : 38} zIndexRange={[10, 0]} className="pointer-events-auto select-none">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -1151,7 +1151,7 @@ export const SolarSystemPlanets: React.FC<SolarSystemProps & { showNames?: boole
         )}
 
         {showNames && (
-          <Html position={[0, 2.4, 0]} center distanceFactor={selectedPlanetName === 'Saturn' ? 14 : 44} className="pointer-events-auto select-none">
+          <Html position={[0, 2.4, 0]} center distanceFactor={selectedPlanetName === 'Saturn' ? 14 : 44} zIndexRange={[10, 0]} className="pointer-events-auto select-none">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -1201,7 +1201,7 @@ export const SolarSystemPlanets: React.FC<SolarSystemProps & { showNames?: boole
         )}
 
         {showNames && (
-          <Html position={[0, 1.8, 0]} center distanceFactor={selectedPlanetName === 'Uranus' ? 13 : 48} className="pointer-events-auto select-none">
+          <Html position={[0, 1.8, 0]} center distanceFactor={selectedPlanetName === 'Uranus' ? 13 : 48} zIndexRange={[10, 0]} className="pointer-events-auto select-none">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -1251,7 +1251,7 @@ export const SolarSystemPlanets: React.FC<SolarSystemProps & { showNames?: boole
         )}
 
         {showNames && (
-          <Html position={[0, 1.6, 0]} center distanceFactor={selectedPlanetName === 'Neptune' ? 13 : 50} className="pointer-events-auto select-none">
+          <Html position={[0, 1.6, 0]} center distanceFactor={selectedPlanetName === 'Neptune' ? 13 : 50} zIndexRange={[10, 0]} className="pointer-events-auto select-none">
             <button
               onClick={(e) => {
                 e.stopPropagation();

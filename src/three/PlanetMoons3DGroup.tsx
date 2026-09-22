@@ -235,6 +235,7 @@ const SingleMoon3DMesh: React.FC<{
             position={[0, moon.size + 0.15, 0]}
             center
             distanceFactor={isFocused ? 14 : 35}
+            zIndexRange={[10, 0]}
             className={`pointer-events-none select-none whitespace-nowrap transition-opacity duration-300 ${isFocused ? 'opacity-100' : 'opacity-0'
               }`}
           >

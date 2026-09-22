@@ -3,6 +3,8 @@ import { Search, Moon, Bot, X, Send, Activity, TrendingUp, Cpu, Compass, Setting
 import { TECH_NODES_OVERLAY } from './data/overlayData';
 import type { TechNodeOverlay } from './data/overlayData';
 import { Master3DUniverseCanvas } from './three/Master3DUniverseCanvas';
+import { AboutSpaceStationModal } from './components/AboutSpaceStationModal';
+import { getAssetUrl } from './utils/assetPath';
 
 export interface UniverseSettings {
   showEarth?: boolean;
@@ -61,6 +63,7 @@ export function App() {
   });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isNodePanelOpen, setIsNodePanelOpen] = useState(false);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
 
   // Close the panel by default when a new node is selected
   useEffect(() => {
@@ -145,6 +148,7 @@ export function App() {
         selectedNode={selectedNode}
         onSelectNode={(node) => setSelectedNode(node)}
         universeSettings={universeSettings}
+        isAnyModalOpen={isAboutOpen || isSearchOpen || isAIAssistantOpen}
       />
 
 
@@ -156,21 +160,12 @@ export function App() {
           onClick={() => setSelectedNode(null)}
           className="flex items-center gap-3 select-none cursor-pointer group"
         >
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 via-sky-500 to-blue-600 flex items-center justify-center p-0.5 shadow-[0_0_20px_rgba(56,189,248,0.4)] group-hover:shadow-[0_0_25px_rgba(56,189,248,0.7)] transition-all">
-            <div className="w-full h-full bg-[#050b18] rounded-[10px] flex items-center justify-center">
-              <svg
-                className="w-5 h-5 text-cyan-400"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M4 20L12 4L20 20" />
-                <path d="M7 14h10" />
-              </svg>
-            </div>
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 via-sky-500 to-blue-600 flex items-center justify-center p-0.5 shadow-[0_0_20px_rgba(56,189,248,0.5)] group-hover:shadow-[0_0_25px_rgba(56,189,248,0.8)] transition-all">
+            <img
+              src={getAssetUrl('/logo/alien_logo.jpg')}
+              alt="NEXORIA Alien Emblem"
+              className="w-full h-full object-cover rounded-[9px]"
+            />
           </div>
           <div className="flex flex-col">
             <span className="font-extrabold tracking-[0.2em] text-lg text-white font-['Space_Grotesk'] leading-tight group-hover:text-cyan-200 transition-colors">
@@ -187,7 +182,12 @@ export function App() {
           {navItems.map((item) => (
             <button
               key={item}
-              onClick={() => setActiveNav(item)}
+              onClick={() => {
+                setActiveNav(item);
+                if (item === 'About') {
+                  setIsAboutOpen(true);
+                }
+              }}
               className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all duration-200 cursor-pointer ${activeNav === item
                   ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.6)] font-semibold'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
@@ -620,6 +620,12 @@ export function App() {
           </div>
         </div>
       )}
+
+      {/* Futuristic Space Station About Modal */}
+      <AboutSpaceStationModal
+        isOpen={isAboutOpen}
+        onClose={() => setIsAboutOpen(false)}
+      />
     </div>
   );
 }
