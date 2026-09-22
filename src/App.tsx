@@ -5,6 +5,8 @@ import type { TechNodeOverlay } from './data/overlayData';
 import { Master3DUniverseCanvas } from './three/Master3DUniverseCanvas';
 
 export interface UniverseSettings {
+  showEarth?: boolean;
+  showSun?: boolean;
   showPlanets: boolean;
   showMoons: boolean;
   showDwarfPlanets: boolean;
@@ -46,13 +48,15 @@ export function App() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const [universeSettings, setUniverseSettings] = useState<UniverseSettings>({
-    showPlanets: true,
+    showEarth: true,
+    showSun: true,
+    showPlanets: false,
     showMoons: true,
-    showDwarfPlanets: true,
-    showComets: true,
+    showDwarfPlanets: false,
+    showComets: false,
     showSatellites: true,
-    showAsteroids: true,
-    showOrbits: true,
+    showAsteroids: false,
+    showOrbits: false,
     showNames: true,
   });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -236,6 +240,16 @@ export function App() {
               <div className="absolute top-12 right-0 w-64 bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 rounded-xl shadow-2xl p-4 flex flex-col gap-3 z-50">
                 <div className="text-xs font-semibold text-cyan-400 mb-1 px-1 tracking-wider uppercase border-b border-slate-700/50 pb-2">Universe Visibility</div>
                 
+                <label className="flex items-center justify-between px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors">
+                  <span className="text-sm font-medium text-slate-200">Earth</span>
+                  <CustomToggle checked={universeSettings.showEarth ?? true} onChange={(val) => setUniverseSettings(s => ({ ...s, showEarth: val }))} />
+                </label>
+
+                <label className="flex items-center justify-between px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors">
+                  <span className="text-sm font-medium text-slate-200">Sun</span>
+                  <CustomToggle checked={universeSettings.showSun ?? true} onChange={(val) => setUniverseSettings(s => ({ ...s, showSun: val }))} />
+                </label>
+
                 <label className="flex items-center justify-between px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors">
                   <span className="text-sm font-medium text-slate-200">Planets</span>
                   <CustomToggle checked={universeSettings.showPlanets} onChange={(val) => setUniverseSettings(s => ({ ...s, showPlanets: val }))} />

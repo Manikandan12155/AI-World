@@ -94,7 +94,7 @@ void main() {
   );
 };
 
-export const CinematicSpaceBackdrop: React.FC = () => {
+export const CinematicSpaceBackdrop: React.FC<{ showSun?: boolean }> = ({ showSun = true }) => {
   const skysphereRef = useRef<THREE.Mesh>(null);
   const starfieldRef = useRef<THREE.Points>(null);
   const moonRef = useRef<THREE.Group>(null);
@@ -283,39 +283,41 @@ export const CinematicSpaceBackdrop: React.FC = () => {
       <Stars radius={300} depth={200} count={6000} factor={6} saturation={0.5} fade speed={1.2} />
 
       {/* 3. THE PHOTOREALISTIC SUN (Sphere Surface + Hair-like Solar Flame Filaments 1:1 + Emitting Fire Sparks) */}
-      <group position={sunPosition}>
+      {showSun && (
+        <group position={sunPosition}>
 
-        {/* 3D Photorealistic Fiery Sun Ball Mesh */}
-        <group ref={sunMeshRef}>
-          <mesh>
-            <sphereGeometry args={[4.5, 64, 64]} />
-            <meshBasicMaterial
-              map={sunSurfaceTexture}
-              color="#fff5cc"
-              toneMapped={false}
-            />
-          </mesh>
+          {/* 3D Photorealistic Fiery Sun Ball Mesh */}
+          <group ref={sunMeshRef}>
+            <mesh>
+              <sphereGeometry args={[4.5, 64, 64]} />
+              <meshBasicMaterial
+                map={sunSurfaceTexture}
+                color="#fff5cc"
+                toneMapped={false}
+              />
+            </mesh>
 
-          {/* Inner atmospheric intense glow hugging the sun */}
-          <mesh>
-            <sphereGeometry args={[4.65, 64, 64]} />
-            <meshBasicMaterial
-              color="#ff8800"
-              transparent
-              opacity={0.5}
-              blending={THREE.AdditiveBlending}
-              depthWrite={false}
-              toneMapped={false}
-            />
-          </mesh>
+            {/* Inner atmospheric intense glow hugging the sun */}
+            <mesh>
+              <sphereGeometry args={[4.65, 64, 64]} />
+              <meshBasicMaterial
+                color="#ff8800"
+                transparent
+                opacity={0.5}
+                blending={THREE.AdditiveBlending}
+                depthWrite={false}
+                toneMapped={false}
+              />
+            </mesh>
+          </group>
+
+          {/* Smooth, elegant glowing halo around the sun */}
+          <SmoothSunCorona />
+
+          {/* High-power radiating solar light illuminating planets from deep space */}
+          <pointLight color="#fff7e6" intensity={8.0} distance={280} decay={0.3} />
         </group>
-
-        {/* Smooth, elegant glowing halo around the sun */}
-        <SmoothSunCorona />
-
-        {/* High-power radiating solar light illuminating planets from deep space */}
-        <pointLight color="#fff7e6" intensity={8.0} distance={280} decay={0.3} />
-      </group>
+      )}
 
       {/* 4. Powerful Direct Sunlight shining directly from the Sun */}
       <directionalLight

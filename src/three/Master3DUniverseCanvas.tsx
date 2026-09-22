@@ -784,8 +784,10 @@ export const Master3DUniverseCanvas: React.FC<MasterUniverseProps> = ({
             enablePan={true}
           />
 
-          <CinematicSpaceBackdrop />
-          <PhotorealisticEarth isFocused={selectedPlanetName === 'Earth' || (!selectedPlanetName && viewMode === 'earth')} planetPositionsRef={planetPositionsRef} showMoons={universeSettings.showMoons} showNames={universeSettings.showNames} showOrbits={universeSettings.showOrbits} />
+          <CinematicSpaceBackdrop showSun={universeSettings.showSun !== false} />
+          {universeSettings.showEarth !== false && (
+            <PhotorealisticEarth isFocused={selectedPlanetName === 'Earth' || (!selectedPlanetName && viewMode === 'earth')} planetPositionsRef={planetPositionsRef} showMoons={universeSettings.showMoons} showNames={universeSettings.showNames} showOrbits={universeSettings.showOrbits} />
+          )}
           
           {universeSettings.showOrbits && (
             <RealisticOrbitalBeams nodePositions={ISLAND_3D_COORDS} />
