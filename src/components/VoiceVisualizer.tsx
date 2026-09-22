@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
-import { Mic, MicOff, X, User, Activity, Ear, Play } from 'lucide-react';
+import { X } from 'lucide-react';
 
 interface VoiceSphereThreeProps {
   state: "listening" | "processing" | "speaking" | "interrupted" | "idle";
