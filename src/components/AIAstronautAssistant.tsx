@@ -4,6 +4,7 @@ import { Float, OrbitControls, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import { Mic, MicOff, Volume2, VolumeX, Send, X, Bot, Sparkles, Radio, RotateCw } from 'lucide-react';
 import { getAssetUrl } from '../utils/assetPath';
+import { VoiceVisualizer } from './VoiceVisualizer';
 
 // ============================================================================
 // FULL-BODY 3D CYBERNETIC ASTRONAUT MODEL (360° ROTATABLE THREE.JS R3F)
@@ -234,6 +235,7 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
   const [isListening, setIsListening] = useState(false);
   const [captionText, setCaptionText] = useState("ASTRA: Ready for telemetry queries...");
   const [speakingPulse, setSpeakingPulse] = useState(0);
+  const [isVoiceVisualizerActive, setIsVoiceVisualizerActive] = useState(false);
   const [viewMode, setViewMode] = useState<'portrait' | '3d'>('portrait');
   const [voiceEngine, setVoiceEngine] = useState<'openai' | 'system'>('openai');
   const [voicePersona, setVoicePersona] = useState<'alloy' | 'shimmer' | 'nova' | 'echo' | 'onyx'>('alloy');
@@ -417,7 +419,7 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
         body: JSON.stringify({ message: query, voice_persona: voicePersona })
       });
       if (!res.ok && !import.meta.env.VITE_BACKEND_URL) {
-        res = await fetch('http://127.0.0.1:8001/api/astra-chat', {
+        res = await fetch('http://127.0.0.1:8555/api/astra-chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message: query, voice_persona: voicePersona })
@@ -771,43 +773,66 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
           {/* RIGHT COLUMN: CHAT MESSAGES LOG */}
           <div className="lg:col-span-7 flex flex-col justify-between rounded-xl bg-slate-950/60 border border-slate-800/90 p-4 space-y-4">
             
-            {/* Chat History */}
-            <div className="flex-1 space-y-3 overflow-y-auto max-h-72 p-2 custom-scrollbar">
-              {messages.map((msg, idx) => (
-                <div
-                  key={idx}
-                  className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[85%] p-3 rounded-xl text-xs leading-relaxed ${
-                      msg.sender === 'user'
-                        ? 'bg-cyan-600 text-slate-950 font-medium rounded-tr-none'
-                        : 'bg-slate-900/90 border border-slate-800 text-slate-200 rounded-tl-none font-mono'
-                    }`}
-                  >
-                    {msg.sender === 'astra' && (
-                      <div className="text-[10px] font-mono font-bold text-cyan-400 mb-1 flex items-center gap-1">
-                        <Sparkles className="w-3 h-3 text-cyan-400" />
-                        <span>NEXORIA ASTRA</span>
+            {/* Chat History or Voice Visualizer */}
+            <div className="flex-1 relative space-y-3 overflow-y-auto max-h-72 p-2 custom-scrollbar">
+              {isVoiceVisualizerActive ? (
+                <VoiceVisualizer
+                  isListening={isListening || isSpeaking}
+                  audioPulse={speakingPulse}
+                  statusText={isSpeaking ? "Speaking..." : (isListening ? "Listening..." : "Standby...")}
+                  captionText={captionText}
+                  onStopListening={() => {
+                    setIsVoiceVisualizerActive(false);
+                    if (isListening) toggleListening();
+                  }}
+                />
+              ) : (
+                <>
+                  {messages.map((msg, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div
+                        className={`max-w-[85%] p-3 rounded-xl text-xs leading-relaxed ${
+                          msg.sender === 'user'
+                            ? 'bg-cyan-600 text-slate-950 font-medium rounded-tr-none'
+                            : 'bg-slate-900/90 border border-slate-800 text-slate-200 rounded-tl-none font-mono'
+                        }`}
+                      >
+                        {msg.sender === 'astra' && (
+                          <div className="text-[10px] font-mono font-bold text-cyan-400 mb-1 flex items-center gap-1">
+                            <Sparkles className="w-3 h-3 text-cyan-400" />
+                            <span>NEXORIA ASTRA</span>
+                          </div>
+                        )}
+                        {msg.text}
                       </div>
-                    )}
-                    {msg.text}
-                  </div>
-                </div>
-              ))}
-              <div ref={messagesEndRef} />
+                    </div>
+                  ))}
+                  <div ref={messagesEndRef} />
+                </>
+              )}
             </div>
 
             {/* Input Bar */}
             <div className="pt-2 border-t border-slate-800/80 flex items-center gap-2">
               <button
-                onClick={toggleListening}
+                onClick={() => {
+                  if (isVoiceVisualizerActive) {
+                    setIsVoiceVisualizerActive(false);
+                    if (isListening) toggleListening();
+                  } else {
+                    setIsVoiceVisualizerActive(true);
+                    if (!isListening) toggleListening();
+                  }
+                }}
                 className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
                   isListening
                     ? 'bg-rose-600 text-white animate-pulse border-rose-400'
                     : 'bg-slate-900 text-slate-300 border-slate-800 hover:text-cyan-300 hover:border-cyan-500/60'
                 }`}
-                title={isListening ? 'Listening... Click to stop' : 'Click to speak via Microphone'}
+                title="Continuous Voice Assistant Mode"
               >
                 {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
               </button>

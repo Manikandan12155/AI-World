@@ -251,8 +251,8 @@ export const CinematicSpaceBackdrop: React.FC<{ showSun?: boolean }> = ({ showSu
               vColor = color;
               
               // Twinkle effect: vary alpha based on time and random offset
-              float twinkle = sin(uTime * (1.0 + mod(sizeOffset, 2.0)) + sizeOffset) * 0.5 + 0.5;
-              vAlpha = mix(0.1, 0.8, twinkle);
+              float twinkle = sin(uTime * (2.0 + mod(sizeOffset, 3.0)) + sizeOffset) * 0.5 + 0.5;
+              vAlpha = mix(0.05, 0.95, twinkle);
               
               vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
               
@@ -280,7 +280,7 @@ export const CinematicSpaceBackdrop: React.FC<{ showSun?: boolean }> = ({ showSu
       </points>
 
       {/* Realistic 3D Parallax Stars from drei (Ambient background stars) */}
-      <Stars radius={300} depth={200} count={6000} factor={6} saturation={0.5} fade speed={1.2} />
+      <Stars radius={300} depth={200} count={6000} factor={6} saturation={0.5} fade speed={3.5} />
 
       {/* 3. THE PHOTOREALISTIC SUN (Sphere Surface + Hair-like Solar Flame Filaments 1:1 + Emitting Fire Sparks) */}
       {showSun && (
