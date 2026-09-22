@@ -235,7 +235,6 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
   const [captionText, setCaptionText] = useState("ASTRA: Ready for telemetry queries...");
   const [speakingPulse, setSpeakingPulse] = useState(0);
   const [viewMode, setViewMode] = useState<'portrait' | '3d'>('portrait');
-  const [useSplineModel, setUseSplineModel] = useState(false);
   const [voiceEngine, setVoiceEngine] = useState<'openai' | 'system'>('openai');
   const [voicePersona, setVoicePersona] = useState<'alloy' | 'shimmer' | 'nova' | 'echo' | 'onyx'>('alloy');
 
