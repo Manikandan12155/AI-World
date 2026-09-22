@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Search, Moon, Bot, X, Send, Activity, TrendingUp, Cpu, Compass, Settings } from 'lucide-react';
+import { Search, Moon, Bot, X, Send, Activity, TrendingUp, Cpu, Compass, Settings, Radio } from 'lucide-react';
 import { TECH_NODES_OVERLAY } from './data/overlayData';
 import type { TechNodeOverlay } from './data/overlayData';
 import { Master3DUniverseCanvas } from './three/Master3DUniverseCanvas';
 import { AboutSpaceStationModal } from './components/AboutSpaceStationModal';
+import { AIAstronautAssistant } from './components/AIAstronautAssistant';
 import { getAssetUrl } from './utils/assetPath';
 
 export interface UniverseSettings {
@@ -47,6 +48,7 @@ export function App() {
   const [activeNav, setActiveNav] = useState('Home');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
+  const [isAstronautOpen, setIsAstronautOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const [universeSettings, setUniverseSettings] = useState<UniverseSettings>({
@@ -88,6 +90,7 @@ export function App() {
         setIsSearchOpen(false);
         setSelectedNode(null);
         setIsAIAssistantOpen(false);
+        setIsAstronautOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -148,10 +151,8 @@ export function App() {
         selectedNode={selectedNode}
         onSelectNode={(node) => setSelectedNode(node)}
         universeSettings={universeSettings}
-        isAnyModalOpen={isAboutOpen || isSearchOpen || isAIAssistantOpen}
+        isAnyModalOpen={isAboutOpen || isSearchOpen || isAIAssistantOpen || isAstronautOpen}
       />
-
-
 
       {/* 2. TOP NAVIGATION BAR */}
       <header className="relative z-30 w-full px-6 py-4 flex items-center justify-between pointer-events-auto">
@@ -304,58 +305,33 @@ export function App() {
         </div>
       </header>
 
-      {/* 
-        3. HERO & METRICS SECTION
-        (Commented out as requested: "outside la erukka text la command pannidu")
-      */}
-      {/* 
-      <div className="relative z-20 flex-1 px-8 md:px-12 flex flex-col justify-between pointer-events-none select-none pb-2">
-        <div className="flex flex-col lg:flex-row justify-between items-start gap-8 mt-2">
-          <div className="max-w-xl pointer-events-auto">
-            <div className="text-[11px] font-semibold tracking-[0.25em] text-slate-400 uppercase mb-3 flex items-center gap-2">
-              <span>GLOBAL TECHNOLOGY INTELLIGENCE</span>
-            </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-[56px] font-extrabold tracking-tight text-white leading-[1.08] font-['Space_Grotesk'] mb-4">
-              A Smarter Tomorrow <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-indigo-400 to-purple-400">Starts Here</span>
-            </h1>
-            <p className="text-sm md:text-base text-slate-300/90 font-normal leading-relaxed mb-6 max-w-md">
-              Real-time insights on AI, cloud, cybersecurity, developer tools, research and more — all in one intelligent platform.
-            </p>
-            <button className="group flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#0d223f]/90 text-white text-xs font-semibold tracking-wide">
-              <span>Mani Tech the World</span>
-            </button>
-          </div>
-        </div>
-        <div className="flex items-center gap-8 md:gap-12 mt-4 pointer-events-auto">
-          <div><span className="text-2xl font-bold">100K+</span><span className="text-[11px] text-slate-400">Tech Updates</span></div>
-          <div><span className="text-2xl font-bold">10K+</span><span className="text-[11px] text-slate-400">Tools & Resources</span></div>
-          <div><span className="text-2xl font-bold">50K+</span><span className="text-[11px] text-slate-400">Global Developers</span></div>
-        </div>
-      </div>
-      */}
-
-      {/* 
-        4. BOTTOM NEWS CARDS SECTION
-        (Removed as requested: "these list also remove pannidu")
-      */}
-      {/* 
-      <footer className="relative z-30 w-full px-6 md:px-10 pb-8 pt-1 pointer-events-auto">
-        ... bottom cards list ...
-      </footer>
-      */}
-
       {/* Spacer to push content */}
       <div className="flex-1 pointer-events-none" />
 
-      {/* 5. FLOATING "ASK INTELLIGENCE" AI BUTTON (Hidden on mobile as it's cleanly integrated into bottom celestial bar) */}
-      <button
-        onClick={() => setIsAIAssistantOpen(!isAIAssistantOpen)}
-        className="hidden sm:flex fixed bottom-6 right-6 z-40 items-center gap-2 px-4 py-2 rounded-full bg-[#0a1b33]/90 hover:bg-[#102a52] border border-cyan-400/50 hover:border-cyan-400 text-white text-xs font-semibold shadow-[0_0_25px_rgba(56,189,248,0.4)] hover:scale-105 transition-all cursor-pointer pointer-events-auto"
-      >
-        <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-        <Bot className="w-4 h-4 text-cyan-400" />
-        <span>Ask Intelligence</span>
-      </button>
+      {/* FLOATING HUD CONTROLS FOR AI VOICE ASTRONAUT & AI INTELLIGENCE */}
+      <div className="fixed bottom-6 right-6 z-40 flex items-center gap-3 pointer-events-auto">
+        {/* 3D ASTRA AI VOICE ASSISTANT LAUNCHER */}
+        <button
+          onClick={() => setIsAstronautOpen(true)}
+          className="flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-700 hover:from-cyan-500 hover:to-blue-600 border border-cyan-300/50 text-white text-xs font-extrabold tracking-wider shadow-[0_0_30px_rgba(6,182,212,0.6)] hover:scale-105 transition-all cursor-pointer group"
+        >
+          <div className="relative flex items-center justify-center">
+            <span className="w-2.5 h-2.5 rounded-full bg-cyan-200 animate-ping absolute" />
+            <Radio className="w-4 h-4 text-cyan-100 group-hover:rotate-12 transition-transform" />
+          </div>
+          <span className="font-['Space_Grotesk'] text-cyan-100">ASTRA 3D VOICE HUD</span>
+        </button>
+
+        {/* FLOATING "ASK INTELLIGENCE" AI BUTTON */}
+        <button
+          onClick={() => setIsAIAssistantOpen(!isAIAssistantOpen)}
+          className="hidden sm:flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#0a1b33]/90 hover:bg-[#102a52] border border-cyan-400/50 hover:border-cyan-400 text-white text-xs font-semibold shadow-[0_0_25px_rgba(56,189,248,0.4)] hover:scale-105 transition-all cursor-pointer"
+        >
+          <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+          <Bot className="w-4 h-4 text-cyan-400" />
+          <span>Ask Intelligence</span>
+        </button>
+      </div>
 
       {/* 6. CATEGORY DETAIL DRAWER */}
       {selectedNode && !isNodePanelOpen && (
@@ -626,8 +602,15 @@ export function App() {
         isOpen={isAboutOpen}
         onClose={() => setIsAboutOpen(false)}
       />
+
+      {/* 3D AI Cybernetic Astronaut Voice Assistant Modal (NEXORIA ASTRA) */}
+      <AIAstronautAssistant
+        isOpen={isAstronautOpen}
+        onClose={() => setIsAstronautOpen(false)}
+      />
     </div>
   );
 }
 
 export default App;
+

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Shield, Cpu, Zap, Radio, Activity, Award, Rocket, Terminal, ExternalLink, User, Layers, Globe, Gauge, CheckCircle2, Lock, Signal, Calendar, Clock, Satellite, HardDrive, Share2, Compass, ArrowUpRight, Box, Code } from 'lucide-react';
+import { X, Cpu, Zap, Radio, Activity, Award, Rocket, Terminal, User, Layers, Globe, Gauge, Lock, Signal, Calendar, Satellite, Share2, Compass, ArrowUpRight, Box, Code } from 'lucide-react';
 import { getAssetUrl } from '../utils/assetPath';
 
 // ============================================================================
