@@ -243,6 +243,7 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const recognitionRef = useRef<any>(null);
 
   // Auto-scroll chat messages
   useEffect(() => {
@@ -501,15 +502,19 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
     }
 
     if (isListening) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
       setIsListening(false);
       return;
     }
 
     try {
       const recognition = new SpeechRecognition();
-      recognition.continuous = false;
+      recognition.continuous = true;
       recognition.interimResults = false;
       recognition.lang = 'en-US';
+      recognitionRef.current = recognition;
 
       recognition.onstart = () => {
         setIsListening(true);
@@ -517,8 +522,8 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
       };
 
       recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        setIsListening(false);
+        const last = event.results.length - 1;
+        const transcript = event.results[last][0].transcript;
         handleSend(transcript);
       };
 
