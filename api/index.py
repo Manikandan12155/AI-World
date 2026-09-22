@@ -20,7 +20,16 @@ class ChatRequest(BaseModel):
 
 @app.get("/api/health")
 def health_check():
-    return {"status": "ok", "service": "NEXORIA Vercel Serverless Backend"}
+    groq_set = bool(os.getenv("GROQ_API_KEY", "").strip())
+    openai_set = bool(os.getenv("OPENAI_API_KEY", "").strip() or os.getenv("VITE_OPENAI_API_KEY", "").strip())
+    return {
+        "status": "ok",
+        "service": "NEXORIA Vercel Serverless Backend",
+        "env_keys": {
+            "GROQ_API_KEY_configured": groq_set,
+            "OPENAI_API_KEY_configured": openai_set
+        }
+    }
 
 @app.post("/api/astra-chat")
 def astra_chat(req: ChatRequest):
