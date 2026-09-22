@@ -8,8 +8,8 @@ export default defineConfig({
     tailwindcss(),
     react()
   ],
-  // If deploying on Netlify use '/', otherwise default to GitHub Pages repository base '/AI-World/'
-  base: process.env.NETLIFY ? '/' : '/AI-World/',
+  // Default to '/' for Vercel, Netlify & root domain hosts. Use '/AI-World/' only when building on GitHub Actions.
+  base: (process.env.VERCEL || process.env.NETLIFY || !process.env.GITHUB_ACTIONS) ? '/' : '/AI-World/',
 })
 
  
