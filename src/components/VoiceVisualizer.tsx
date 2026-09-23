@@ -334,8 +334,17 @@ export const VoiceVisualizer: React.FC<VoiceVisualizerProps> = ({
         <X className="w-4 h-4" />
       </button>
 
-      {/* Subtle glowing orb behind the sphere */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[60%] w-56 h-56 bg-cyan-500/10 rounded-full blur-[50px] pointer-events-none" />
+      {/* Central Soft White Focus Light Spotlight Shading */}
+      <div className="absolute top-[42%] left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-0 flex items-center justify-center">
+        {/* Primary Soft White Core Focus Light */}
+        <div className="w-64 h-64 sm:w-72 sm:h-72 rounded-full bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.38)_0%,rgba(224,242,254,0.22)_40%,rgba(56,189,248,0.1)_70%,transparent_100%)] blur-2xl animate-pulse" />
+        
+        {/* Secondary Inner Bright White Glow Spot */}
+        <div className="absolute w-44 h-44 rounded-full bg-white/25 blur-xl" />
+
+        {/* Outer Halo Flare */}
+        <div className="absolute w-80 h-80 rounded-full bg-sky-300/15 blur-[65px]" />
+      </div>
 
       {/* 3D Sphere Container & Status Text */}
       <div className="relative z-10 flex flex-col items-center justify-center w-full -mt-6">
