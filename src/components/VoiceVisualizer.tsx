@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
-import { X } from 'lucide-react';
+import { X, Square } from 'lucide-react';
 
 interface VoiceSphereThreeProps {
   state: "listening" | "processing" | "speaking" | "interrupted" | "idle";
@@ -298,6 +298,7 @@ const TypewriterText = ({ text }: { text: string }) => {
 interface VoiceVisualizerProps {
   isListening: boolean;
   onStopListening: () => void;
+  onInterrupt?: () => void;
   audioPulse: number; 
   statusText: string;
   captionText?: string;
@@ -306,6 +307,7 @@ interface VoiceVisualizerProps {
 export const VoiceVisualizer: React.FC<VoiceVisualizerProps> = ({ 
   isListening, 
   onStopListening,
+  onInterrupt,
   audioPulse,
   statusText,
   captionText
@@ -317,6 +319,8 @@ export const VoiceVisualizer: React.FC<VoiceVisualizerProps> = ({
     if (isListening) return "idle";
     return "idle";
   };
+
+  const isSpeaking = statusText === "Speaking...";
 
   return (
     <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/40 backdrop-blur-sm overflow-hidden rounded-xl">
@@ -334,14 +338,25 @@ export const VoiceVisualizer: React.FC<VoiceVisualizerProps> = ({
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[60%] w-56 h-56 bg-cyan-500/10 rounded-full blur-[50px] pointer-events-none" />
 
       {/* 3D Sphere Container & Status Text */}
-      <div className="relative z-10 flex flex-col items-center justify-center w-full -mt-10">
+      <div className="relative z-10 flex flex-col items-center justify-center w-full -mt-6">
         <VoiceSphereThree 
           state={getSphereState()} 
           isVoiceActive={audioPulse > 0} 
         />
-        <h2 className="text-cyan-400 text-sm font-bold tracking-[0.2em] uppercase drop-shadow-[0_0_8px_rgba(34,211,238,0.6)] mt-4">
+        <h2 className="text-cyan-400 text-sm font-bold tracking-[0.2em] uppercase drop-shadow-[0_0_8px_rgba(34,211,238,0.6)] mt-3">
           {statusText || (isListening ? "Listening..." : "Standby...")}
         </h2>
+
+        {/* Tap to Interrupt Button when AI is speaking */}
+        {isSpeaking && onInterrupt && (
+          <button
+            onClick={onInterrupt}
+            className="mt-4 px-4 py-2 rounded-full bg-rose-600 hover:bg-rose-500 text-white font-black text-xs tracking-wider flex items-center gap-2 border border-rose-400 shadow-[0_0_20px_rgba(225,29,72,0.8)] animate-pulse cursor-pointer transition-all hover:scale-105"
+          >
+            <Square className="w-3.5 h-3.5 fill-white" />
+            <span>TAP TO INTERRUPT AI</span>
+          </button>
+        )}
       </div>
 
       {/* Caption overlay at the absolute bottom */}

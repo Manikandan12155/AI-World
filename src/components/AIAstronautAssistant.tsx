@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Float, OrbitControls, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
-import { Mic, MicOff, Volume2, VolumeX, Send, X, Bot, Sparkles, Radio, RotateCw } from 'lucide-react';
+import { Mic, MicOff, Volume2, VolumeX, Send, X, Bot, Sparkles, Radio, RotateCw, Square } from 'lucide-react';
 import { getAssetUrl } from '../utils/assetPath';
 import { VoiceVisualizer } from './VoiceVisualizer';
 
@@ -272,6 +272,20 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
       .trim();
   };
 
+  // Stop speaking immediately (Interrupt AI)
+  const stopSpeaking = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    setIsSpeaking(false);
+    setSpeakingPulse(0);
+    setCaptionText("ASTRA: Speech interrupted. Tap Mic or type to command.");
+  };
+
   // Fallback Web Speech Synthesis with best Natural/Neural voice filter
   const fallbackWebSpeech = (text: string) => {
     if (!('speechSynthesis' in window)) return;
@@ -301,6 +315,10 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
     if (humanVoice) utterance.voice = humanVoice;
 
     utterance.onstart = () => {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch (e) {}
+      }
+      setIsListening(false);
       setIsSpeaking(true);
       setSpeakingPulse(1);
     };
@@ -369,6 +387,10 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
           audioRef.current = audio;
 
           audio.onplay = () => {
+            if (recognitionRef.current) {
+              try { recognitionRef.current.stop(); } catch (e) {}
+            }
+            setIsListening(false);
             setIsSpeaking(true);
             setSpeakingPulse(1);
             startTypewriterCaption(text);
@@ -403,6 +425,12 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
   const handleSend = async (customText?: string) => {
     const query = (customText || input).trim();
     if (!query) return;
+
+    // Stop microphone immediately when query is submitted
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch (e) {}
+    }
+    setIsListening(false);
 
     const newMessages = [...messages, { sender: 'user' as const, text: query }];
     setMessages(newMessages);
@@ -495,6 +523,12 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
 
   // Toggle Microphone Input (Speech-to-Text)
   const toggleListening = () => {
+    // Tapping Mic while AI is speaking interrupts AI speech immediately
+    if (isSpeaking) {
+      stopSpeaking();
+      return;
+    }
+
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
       alert('Speech Recognition is not supported on this browser. Please use Chrome or Edge.');
@@ -503,7 +537,7 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
 
     if (isListening) {
       if (recognitionRef.current) {
-        recognitionRef.current.stop();
+        try { recognitionRef.current.stop(); } catch (e) {}
       }
       setIsListening(false);
       return;
@@ -511,7 +545,7 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
 
     try {
       const recognition = new SpeechRecognition();
-      recognition.continuous = true;
+      recognition.continuous = false; // Stops automatically after single utterance
       recognition.interimResults = false;
       recognition.lang = 'en-US';
       recognitionRef.current = recognition;
@@ -524,6 +558,10 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
       recognition.onresult = (event: any) => {
         const last = event.results.length - 1;
         const transcript = event.results[last][0].transcript;
+        if (recognitionRef.current) {
+          try { recognitionRef.current.stop(); } catch (e) {}
+        }
+        setIsListening(false);
         handleSend(transcript);
       };
 
@@ -786,8 +824,10 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
                   audioPulse={speakingPulse}
                   statusText={isSpeaking ? "Speaking..." : (isListening ? "Listening..." : "Standby...")}
                   captionText={captionText}
+                  onInterrupt={stopSpeaking}
                   onStopListening={() => {
                     setIsVoiceVisualizerActive(false);
+                    if (isSpeaking) stopSpeaking();
                     if (isListening) toggleListening();
                   }}
                 />
@@ -820,44 +860,56 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
               )}
             </div>
 
-            {/* Input Bar */}
+            {/* Input Bar or Tap to Interrupt AI Button */}
             <div className="pt-2 border-t border-slate-800/80 flex items-center gap-2">
-              <button
-                onClick={() => {
-                  if (isVoiceVisualizerActive) {
-                    setIsVoiceVisualizerActive(false);
-                    if (isListening) toggleListening();
-                  } else {
-                    setIsVoiceVisualizerActive(true);
-                    if (!isListening) toggleListening();
-                  }
-                }}
-                className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
-                  isListening
-                    ? 'bg-rose-600 text-white animate-pulse border-rose-400'
-                    : 'bg-slate-900 text-slate-300 border-slate-800 hover:text-cyan-300 hover:border-cyan-500/60'
-                }`}
-                title="Continuous Voice Assistant Mode"
-              >
-                {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-              </button>
+              {isSpeaking ? (
+                <button
+                  onClick={stopSpeaking}
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs tracking-wider flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(225,29,72,0.8)] border border-rose-400 animate-pulse transition-all cursor-pointer hover:scale-[1.01]"
+                >
+                  <Square className="w-4 h-4 fill-white" />
+                  <span>🛑 TAP TO INTERRUPT AI VOICE</span>
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => {
+                      if (isVoiceVisualizerActive) {
+                        setIsVoiceVisualizerActive(false);
+                        if (isListening) toggleListening();
+                      } else {
+                        setIsVoiceVisualizerActive(true);
+                        if (!isListening) toggleListening();
+                      }
+                    }}
+                    className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
+                      isListening
+                        ? 'bg-rose-600 text-white animate-pulse border-rose-400'
+                        : 'bg-slate-900 text-slate-300 border-slate-800 hover:text-cyan-300 hover:border-cyan-500/60'
+                    }`}
+                    title="Voice Assistant Mode"
+                  >
+                    {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                  </button>
 
-              <input
-                type="text"
-                placeholder="Ask ASTRA about space missions, orbits, AI..."
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/60 font-mono"
-              />
+                  <input
+                    type="text"
+                    placeholder="Ask ASTRA about space missions, orbits, AI..."
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                    className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/60 font-mono"
+                  />
 
-              <button
-                onClick={() => handleSend()}
-                disabled={!input.trim()}
-                className="p-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-40 text-slate-950 font-bold transition-all cursor-pointer"
-              >
-                <Send className="w-4 h-4" />
-              </button>
+                  <button
+                    onClick={() => handleSend()}
+                    disabled={!input.trim()}
+                    className="p-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-40 text-slate-950 font-bold transition-all cursor-pointer"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </>
+              )}
             </div>
 
           </div>
