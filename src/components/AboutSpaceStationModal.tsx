@@ -201,28 +201,28 @@ export const AboutSpaceStationModal: React.FC<AboutSpaceStationModalProps> = ({
         <div className="absolute top-0 bottom-0 right-0 w-1 bg-gradient-to-b from-blue-600 via-cyan-400 to-transparent shadow-[0_0_15px_#38bdf8]" />
 
         {/* 1. NEXORIA TOP HEADER SECTION */}
-        <div className="flex items-center justify-between px-6 py-3.5 border-b border-[#152e50] bg-[#050c18] relative">
-          <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3.5 border-b border-[#152e50] bg-[#050c18] relative">
+          <div className="flex items-center gap-2.5 sm:gap-4">
             {/* NEXORIA Alien Emblem Badge */}
             <img
               src={getAssetUrl('/logo/alien_logo.jpg')}
               alt="NEXORIA"
-              className="w-12 h-12 rounded-full border-2 border-cyan-400 object-cover shadow-[0_0_15px_rgba(56,189,248,0.6)] shrink-0"
+              className="w-9 h-9 sm:w-12 sm:h-12 rounded-full border-2 border-cyan-400 object-cover shadow-[0_0_15px_rgba(56,189,248,0.6)] shrink-0"
             />
 
             <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-base sm:text-lg font-black tracking-widest text-white uppercase font-['Space_Grotesk']">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                <h2 className="text-xs sm:text-lg font-black tracking-widest text-white uppercase font-['Space_Grotesk']">
                   NEXORIA ORBITAL COMMAND
                 </h2>
-                <span className="px-2 py-0.5 rounded text-[9px] font-mono font-extrabold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 uppercase tracking-wide">
-                  NX-HQ COMMAND
+                <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-mono font-extrabold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 uppercase tracking-wide">
+                  NX-HQ
                 </span>
               </div>
-              <p className="text-[10px] font-mono text-slate-400 tracking-wider uppercase">
-                MANI TECH TOMORROW. TODAY. // DEEP SPACE UNIVERSE NETWORK
+              <p className="text-[9px] sm:text-[10px] font-mono text-slate-400 tracking-wider uppercase truncate max-w-[200px] sm:max-w-none">
+                MANI TECH TOMORROW. TODAY.
               </p>
-              <p className="text-[11px] font-mono text-slate-300 flex items-center gap-2 mt-1">
+              <p className="hidden sm:flex items-center gap-2 mt-1 text-[11px] font-mono text-slate-300">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />
                 <span className="text-cyan-300 font-bold">NEXORIA ORBITAL OPERATIONS</span>
                 <span className="text-slate-600">|</span>
@@ -235,29 +235,32 @@ export const AboutSpaceStationModal: React.FC<AboutSpaceStationModalProps> = ({
             </div>
           </div>
 
-          {/* Right Header Widget: Clock & Mini Globe Earth Preview */}
-          <div className="hidden md:flex items-center gap-4">
-            <div className="text-right font-mono">
-              <div className="text-[10px] text-slate-400 tracking-widest uppercase">
-                {currentTime.split('  ')[0] || 'TUE, SEP 22, 2026'}
+          {/* Close Button (Mobile & Desktop) */}
+          <div className="flex items-center gap-2">
+            {/* Right Header Widget: Clock & Mini Globe Earth Preview */}
+            <div className="hidden md:flex items-center gap-4">
+              <div className="text-right font-mono">
+                <div className="text-[10px] text-slate-400 tracking-widest uppercase">
+                  {currentTime.split('  ')[0] || 'TUE, SEP 22, 2026'}
+                </div>
+                <div className="text-sm font-black text-cyan-300 tracking-wider">
+                  {currentTime.split('  ')[1] || '15:42:17 IST'}
+                </div>
               </div>
-              <div className="text-sm font-black text-cyan-300 tracking-wider">
-                {currentTime.split('  ')[1] || '15:42:17 IST'}
-              </div>
-            </div>
 
-            {/* Earth Hologram Graphic Container */}
-            <div className="w-11 h-11 rounded-full border-2 border-cyan-400 shadow-[0_0_20px_rgba(56,189,248,0.6)] overflow-hidden bg-slate-950 relative flex items-center justify-center shrink-0">
-              <img
-                src={getAssetUrl('/textures/Daytime.png')}
-                alt="Photorealistic Earth"
-                className="w-full h-full object-cover animate-spin-slow"
-              />
+              {/* Earth Hologram Graphic Container */}
+              <div className="w-11 h-11 rounded-full border-2 border-cyan-400 shadow-[0_0_20px_rgba(56,189,248,0.6)] overflow-hidden bg-slate-950 relative flex items-center justify-center shrink-0">
+                <img
+                  src={getAssetUrl('/textures/Daytime.png')}
+                  alt="Photorealistic Earth"
+                  className="w-full h-full object-cover animate-spin-slow"
+                />
+              </div>
             </div>
 
             <button
               onClick={onClose}
-              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-[#122744] border border-transparent hover:border-[#1e3c6a] transition-all cursor-pointer"
+              className="p-1.5 sm:p-2 rounded-lg text-slate-400 hover:text-white hover:bg-[#122744] border border-slate-700/60 transition-all cursor-pointer"
               title="Close Terminal (ESC)"
             >
               <X className="w-5 h-5 text-slate-300" />
@@ -297,12 +300,12 @@ export const AboutSpaceStationModal: React.FC<AboutSpaceStationModalProps> = ({
         {/* 3. MAIN TERMINAL CONTENT */}
         <div className="p-5 sm:p-6 overflow-y-auto max-h-[calc(92vh-150px)] space-y-5 custom-scrollbar bg-[#030712]">
           
-          {/* TAB 1: FLIGHT CREW MANIFEST */}
+          {/* TAB 1: FLIGHT CREW MANIFEST (PROFILE) */}
           {activeTab === 'manifest' && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-stretch">
               
               {/* LEFT COLUMN: FULL SIZE CREW PORTRAIT CARD */}
-              <div className="lg:col-span-4 flex flex-col justify-between rounded-xl bg-gradient-to-b from-[#08172c] via-[#050f1d] to-[#020710] border-2 border-[#16355e] p-4 shadow-2xl relative overflow-hidden space-y-4">
+              <div className="lg:col-span-4 flex flex-col justify-between rounded-xl bg-gradient-to-b from-[#08172c] via-[#050f1d] to-[#020710] border-2 border-[#16355e] p-3 sm:p-4 shadow-2xl relative overflow-hidden space-y-3 sm:space-y-4">
                 
                 {/* Full-size Portrait Box */}
                 <div className="relative w-full rounded-lg overflow-hidden border-2 border-cyan-500/70 shadow-[0_0_25px_rgba(11,61,145,0.6)] bg-slate-950">
@@ -318,87 +321,87 @@ export const AboutSpaceStationModal: React.FC<AboutSpaceStationModalProps> = ({
                   <img
                     src={NEXORIA_CREW_DATA.avatarUrl}
                     alt={NEXORIA_CREW_DATA.name}
-                    className="relative z-10 w-full h-72 sm:h-80 object-cover object-top transition-transform duration-500 hover:scale-103"
+                    className="relative z-10 w-full h-60 sm:h-80 object-cover object-top transition-transform duration-500 hover:scale-103"
                   />
 
                   {/* NEXORIA Emblem Overlay Top Right */}
-                  <div className="absolute top-3 right-3 z-20 flex flex-col items-end">
+                  <div className="absolute top-2 sm:top-3 right-2 sm:right-3 z-20 flex flex-col items-end">
                     <img
                       src={getAssetUrl('/logo/alien_logo.jpg')}
                       alt="NEXORIA"
-                      className="w-10 h-10 rounded-full border border-cyan-400 object-cover shadow"
+                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-cyan-400 object-cover shadow"
                     />
-                    <span className="text-[8px] font-mono text-cyan-200 mt-1 max-w-[90px] text-right leading-tight drop-shadow">
+                    <span className="text-[7px] sm:text-[8px] font-mono text-cyan-200 mt-1 max-w-[80px] sm:max-w-[90px] text-right leading-tight drop-shadow">
                       "BUILDING SYSTEMS FOR A BETTER TOMORROW"
                     </span>
                   </div>
 
                   {/* Status Badges Overlay at Bottom */}
-                  <div className="absolute bottom-3 left-3 right-3 z-20 flex items-center justify-between">
-                    <span className="px-2.5 py-1 rounded text-[10px] font-mono font-black bg-[#10b981] text-slate-950 shadow-md uppercase tracking-wide">
+                  <div className="absolute bottom-2.5 sm:bottom-3 left-2.5 sm:left-3 right-2.5 sm:right-3 z-20 flex items-center justify-between">
+                    <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded text-[9px] sm:text-[10px] font-mono font-black bg-[#10b981] text-slate-950 shadow-md uppercase tracking-wide">
                       {NEXORIA_CREW_DATA.flightStatus}
                     </span>
-                    <span className="px-2.5 py-1 rounded text-[10px] font-mono font-bold bg-[#0B3D91] text-cyan-200 border border-cyan-400 shadow uppercase">
+                    <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded text-[9px] sm:text-[10px] font-mono font-bold bg-[#0B3D91] text-cyan-200 border border-cyan-400 shadow uppercase">
                       NEXORIA ISS
                     </span>
                   </div>
                 </div>
 
                 {/* Author Name & Metadata Table */}
-                <div className="space-y-3 bg-[#040b17] p-4 rounded-lg border border-[#122848]">
+                <div className="space-y-2.5 sm:space-y-3 bg-[#040b17] p-3 sm:p-4 rounded-lg border border-[#122848]">
                   <div className="flex items-center justify-between border-b border-[#142d52] pb-2">
-                    <h3 className="text-xl font-black text-white font-['Space_Grotesk'] tracking-wider">
+                    <h3 className="text-lg sm:text-xl font-black text-white font-['Space_Grotesk'] tracking-wider">
                       {NEXORIA_CREW_DATA.name}
                     </h3>
-                    <span className="px-2 py-0.5 rounded text-[9px] font-mono font-extrabold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                    <span className="px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-mono font-extrabold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
                       NX-HQ
                     </span>
                   </div>
 
-                  <p className="text-xs font-mono font-bold text-cyan-300">
+                  <p className="text-[11px] sm:text-xs font-mono font-bold text-cyan-300">
                     {NEXORIA_CREW_DATA.rankTitle}
                   </p>
 
                   {/* Key-Value Metadata Grid */}
-                  <div className="space-y-1.5 pt-1 font-mono text-xs text-slate-300">
-                    <div className="flex items-center justify-between py-1 border-b border-slate-900">
-                      <span className="text-slate-400 flex items-center gap-1.5 text-[11px]">
-                        <User className="w-3 h-3 text-cyan-400" /> CREW ID
+                  <div className="space-y-1 pt-1 font-mono text-[11px] sm:text-xs text-slate-300">
+                    <div className="flex items-center justify-between py-1 border-b border-slate-900/80">
+                      <span className="text-slate-400 flex items-center gap-1.5 text-[10px] sm:text-[11px]">
+                        <User className="w-3 h-3 text-cyan-400 shrink-0" /> CREW ID
                       </span>
                       <span className="font-bold text-slate-100">{NEXORIA_CREW_DATA.crewDetails.crewId}</span>
                     </div>
 
-                    <div className="flex items-center justify-between py-1 border-b border-slate-900">
-                      <span className="text-slate-400 flex items-center gap-1.5 text-[11px]">
-                        <Lock className="w-3 h-3 text-cyan-400" /> CLEARANCE
+                    <div className="flex items-center justify-between py-1 border-b border-slate-900/80">
+                      <span className="text-slate-400 flex items-center gap-1.5 text-[10px] sm:text-[11px]">
+                        <Lock className="w-3 h-3 text-cyan-400 shrink-0" /> CLEARANCE
                       </span>
                       <span className="font-extrabold text-emerald-400">{NEXORIA_CREW_DATA.crewDetails.clearance}</span>
                     </div>
 
-                    <div className="flex items-center justify-between py-1 border-b border-slate-900">
-                      <span className="text-slate-400 flex items-center gap-1.5 text-[11px]">
-                        <Award className="w-3 h-3 text-cyan-400" /> ROLE
+                    <div className="flex items-center justify-between py-1 border-b border-slate-900/80">
+                      <span className="text-slate-400 flex items-center gap-1.5 text-[10px] sm:text-[11px]">
+                        <Award className="w-3 h-3 text-cyan-400 shrink-0" /> ROLE
                       </span>
-                      <span className="font-medium text-slate-200">{NEXORIA_CREW_DATA.crewDetails.role}</span>
+                      <span className="font-medium text-slate-200 truncate max-w-[140px] sm:max-w-none text-right">{NEXORIA_CREW_DATA.crewDetails.role}</span>
                     </div>
 
-                    <div className="flex items-center justify-between py-1 border-b border-slate-900">
-                      <span className="text-slate-400 flex items-center gap-1.5 text-[11px]">
-                        <Layers className="w-3 h-3 text-cyan-400" /> DIVISION
+                    <div className="flex items-center justify-between py-1 border-b border-slate-900/80">
+                      <span className="text-slate-400 flex items-center gap-1.5 text-[10px] sm:text-[11px]">
+                        <Layers className="w-3 h-3 text-cyan-400 shrink-0" /> DIVISION
                       </span>
-                      <span className="font-medium text-slate-200">{NEXORIA_CREW_DATA.crewDetails.division}</span>
+                      <span className="font-medium text-slate-200 truncate max-w-[140px] sm:max-w-none text-right">{NEXORIA_CREW_DATA.crewDetails.division}</span>
                     </div>
 
-                    <div className="flex items-center justify-between py-1 border-b border-slate-900">
-                      <span className="text-slate-400 flex items-center gap-1.5 text-[11px]">
-                        <Compass className="w-3 h-3 text-cyan-400" /> LOCATION
+                    <div className="flex items-center justify-between py-1 border-b border-slate-900/80">
+                      <span className="text-slate-400 flex items-center gap-1.5 text-[10px] sm:text-[11px]">
+                        <Compass className="w-3 h-3 text-cyan-400 shrink-0" /> LOCATION
                       </span>
                       <span className="font-medium text-slate-200">{NEXORIA_CREW_DATA.crewDetails.location}</span>
                     </div>
 
                     <div className="flex items-center justify-between py-1">
-                      <span className="text-slate-400 flex items-center gap-1.5 text-[11px]">
-                        <Activity className="w-3 h-3 text-cyan-400" /> STATUS
+                      <span className="text-slate-400 flex items-center gap-1.5 text-[10px] sm:text-[11px]">
+                        <Activity className="w-3 h-3 text-cyan-400 shrink-0" /> STATUS
                       </span>
                       <span className="font-bold text-emerald-400 flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block" />
@@ -409,99 +412,99 @@ export const AboutSpaceStationModal: React.FC<AboutSpaceStationModalProps> = ({
                 </div>
 
                 {/* Quote Callout Box */}
-                <div className="p-3.5 rounded-lg bg-[#030914] border border-[#102442] italic text-xs font-serif text-slate-300 text-center">
+                <div className="p-2.5 sm:p-3.5 rounded-lg bg-[#030914] border border-[#102442] italic text-[11px] sm:text-xs font-serif text-slate-300 text-center leading-relaxed">
                   “ {NEXORIA_CREW_DATA.quote} ”
                 </div>
 
               </div>
 
               {/* RIGHT COLUMN: MISSION OVERVIEW, GAUGES, SPECIALIZATIONS & LINKS */}
-              <div className="lg:col-span-8 flex flex-col justify-between space-y-4">
+              <div className="lg:col-span-8 flex flex-col justify-between space-y-3 sm:space-y-4">
                 
                 {/* 1. MISSION OVERVIEW CARD WITH SPACE STATION RENDER */}
-                <div className="rounded-xl bg-gradient-to-r from-[#07162d] via-[#051124] to-[#040c1a] border border-[#163560] p-4 sm:p-5 shadow-lg relative overflow-hidden flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div className="space-y-2 max-w-lg">
-                    <div className="flex items-center gap-2 text-xs font-mono font-bold text-cyan-300 uppercase tracking-widest">
-                      <Rocket className="w-4 h-4 text-cyan-400" />
+                <div className="rounded-xl bg-gradient-to-r from-[#07162d] via-[#051124] to-[#040c1a] border border-[#163560] p-3.5 sm:p-5 shadow-lg relative overflow-hidden flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+                  <div className="space-y-1.5 sm:space-y-2 max-w-lg">
+                    <div className="flex items-center gap-2 text-[11px] sm:text-xs font-mono font-bold text-cyan-300 uppercase tracking-widest">
+                      <Rocket className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400 shrink-0" />
                       <span>NEXORIA UNIVERSE MISSION OVERVIEW</span>
                     </div>
-                    <p className="text-xs text-slate-200 leading-relaxed font-sans">
+                    <p className="text-[11px] sm:text-xs text-slate-200 leading-relaxed font-sans">
                       {NEXORIA_CREW_DATA.officialBio}
                     </p>
                   </div>
 
                   {/* Space Station Graphic Banner */}
-                  <div className="w-full sm:w-52 h-28 rounded-lg overflow-hidden border border-cyan-500/40 relative shrink-0 shadow">
+                  <div className="w-full sm:w-48 md:w-52 h-24 sm:h-28 rounded-lg overflow-hidden border border-cyan-500/40 relative shrink-0 shadow">
                     <img
                       src="https://images.unsplash.com/photo-1541185933-ef5d8ed016c2?q=80&w=400&auto=format&fit=crop"
                       alt="NEXORIA Space Station"
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#040c1a] via-transparent to-transparent" />
-                    <span className="absolute bottom-1 right-2 text-[9px] font-mono text-cyan-300 font-bold">
+                    <span className="absolute bottom-1 right-2 text-[8px] sm:text-[9px] font-mono text-cyan-300 font-bold">
                       NEXORIA ORBITAL LAB
                     </span>
                   </div>
                 </div>
 
                 {/* 2. TELEMETRY GAUGES (3 GAUGES WITH COLOR BARS) */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
                   
                   {/* Gauge 1: DSN Signal */}
-                  <div className="p-4 rounded-xl bg-[#061426] border border-[#16335c] space-y-2">
-                    <div className="flex items-center justify-between text-xs font-mono text-slate-400">
+                  <div className="p-3 sm:p-4 rounded-xl bg-[#061426] border border-[#16335c] space-y-1.5 sm:space-y-2">
+                    <div className="flex items-center justify-between text-[11px] sm:text-xs font-mono text-slate-400">
                       <span className="flex items-center gap-1.5">
-                        <Radio className="w-4 h-4 text-emerald-400" /> DSN SIGNAL
+                        <Radio className="w-3.5 h-3.5 text-emerald-400" /> DSN SIGNAL
                       </span>
                     </div>
-                    <div className="text-xl font-black text-white font-mono">
+                    <div className="text-lg sm:text-xl font-black text-white font-mono">
                       {NEXORIA_CREW_DATA.telemetryMetrics[0].value}
                     </div>
                     {/* Emerald Progress Bar */}
                     <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
                       <div className="h-full bg-emerald-400 rounded-full w-[98%] shadow-[0_0_8px_#34d399]" />
                     </div>
-                    <div className="flex items-center justify-between text-[10px] font-mono">
+                    <div className="flex items-center justify-between text-[9px] sm:text-[10px] font-mono">
                       <span className="text-emerald-400 font-bold uppercase">OPTIMAL</span>
                       <span className="text-slate-500 font-sans">~~~~~</span>
                     </div>
                   </div>
 
                   {/* Gauge 2: Flight Time */}
-                  <div className="p-4 rounded-xl bg-[#061426] border border-[#16335c] space-y-2">
-                    <div className="flex items-center justify-between text-xs font-mono text-slate-400">
+                  <div className="p-3 sm:p-4 rounded-xl bg-[#061426] border border-[#16335c] space-y-1.5 sm:space-y-2">
+                    <div className="flex items-center justify-between text-[11px] sm:text-xs font-mono text-slate-400">
                       <span className="flex items-center gap-1.5">
-                        <Calendar className="w-4 h-4 text-cyan-400" /> FLIGHT TIME
+                        <Calendar className="w-3.5 h-3.5 text-cyan-400" /> FLIGHT TIME
                       </span>
                     </div>
-                    <div className="text-xl font-black text-white font-mono">
+                    <div className="text-lg sm:text-xl font-black text-white font-mono">
                       {NEXORIA_CREW_DATA.telemetryMetrics[1].value}
                     </div>
                     {/* Cyan Progress Bar */}
                     <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
                       <div className="h-full bg-cyan-400 rounded-full w-[85%] shadow-[0_0_8px_#38bdf8]" />
                     </div>
-                    <div className="flex items-center justify-between text-[10px] font-mono">
+                    <div className="flex items-center justify-between text-[9px] sm:text-[10px] font-mono">
                       <span className="text-cyan-400 font-bold uppercase">NORMAL</span>
                       <span className="text-slate-500 font-sans">|||||||</span>
                     </div>
                   </div>
 
                   {/* Gauge 3: Orbital Speed */}
-                  <div className="p-4 rounded-xl bg-[#061426] border border-[#16335c] space-y-2">
-                    <div className="flex items-center justify-between text-xs font-mono text-slate-400">
+                  <div className="p-3 sm:p-4 rounded-xl bg-[#061426] border border-[#16335c] space-y-1.5 sm:space-y-2">
+                    <div className="flex items-center justify-between text-[11px] sm:text-xs font-mono text-slate-400">
                       <span className="flex items-center gap-1.5">
-                        <Gauge className="w-4 h-4 text-rose-400" /> ORBITAL SPEED
+                        <Gauge className="w-3.5 h-3.5 text-rose-400" /> ORBITAL SPEED
                       </span>
                     </div>
-                    <div className="text-xl font-black text-white font-mono">
+                    <div className="text-lg sm:text-xl font-black text-white font-mono">
                       {NEXORIA_CREW_DATA.telemetryMetrics[2].value}
                     </div>
                     {/* Rose Progress Bar */}
                     <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
                       <div className="h-full bg-rose-500 rounded-full w-[94%] shadow-[0_0_8px_#f43f5e]" />
                     </div>
-                    <div className="flex items-center justify-between text-[10px] font-mono">
+                    <div className="flex items-center justify-between text-[9px] sm:text-[10px] font-mono">
                       <span className="text-rose-400 font-bold uppercase">SECURE</span>
                       <span className="text-slate-500 font-sans">~~~~~</span>
                     </div>
@@ -510,32 +513,31 @@ export const AboutSpaceStationModal: React.FC<AboutSpaceStationModalProps> = ({
                 </div>
 
                 {/* 3. FLIGHT SPECIALIZATIONS & SYSTEMS CAPABILITIES (2x2 GRID) */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between text-xs font-mono font-bold text-cyan-300 uppercase tracking-widest">
+                <div className="space-y-2.5 sm:space-y-3">
+                  <div className="flex items-center justify-between text-[11px] sm:text-xs font-mono font-bold text-cyan-300 uppercase tracking-widest">
                     <span className="flex items-center gap-1.5">
-                      <Zap className="w-4 h-4 text-cyan-400" />
-                      <span>FLIGHT SPECIALIZATIONS & SYSTEMS CAPABILITIES</span>
+                      <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400 shrink-0" />
+                      <span>FLIGHT SPECIALIZATIONS & CAPABILITIES</span>
                     </span>
-                    <span className="text-[10px] text-slate-400 hover:text-cyan-300 cursor-pointer">VIEW ALL →</span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                     {NEXORIA_CREW_DATA.flightSpecializations.map((spec, idx) => (
                       <div
                         key={idx}
-                        className="p-3.5 rounded-xl bg-[#061426] border border-[#153159] hover:border-cyan-400 transition-all flex items-start gap-3 group"
+                        className="p-3 sm:p-3.5 rounded-xl bg-[#061426] border border-[#153159] hover:border-cyan-400 transition-all flex items-start gap-2.5 sm:gap-3 group"
                       >
-                        <div className="p-2.5 rounded-lg bg-[#0a1e3b] border border-[#1b3d6f] text-cyan-400 group-hover:text-white group-hover:bg-[#0B3D91] transition-colors shrink-0">
-                          {spec.icon === 'satellite' && <Satellite className="w-5 h-5" />}
-                          {spec.icon === 'cube' && <Box className="w-5 h-5" />}
-                          {spec.icon === 'atom' && <Code className="w-5 h-5" />}
-                          {spec.icon === 'dish' && <Radio className="w-5 h-5" />}
+                        <div className="p-2 sm:p-2.5 rounded-lg bg-[#0a1e3b] border border-[#1b3d6f] text-cyan-400 group-hover:text-white group-hover:bg-[#0B3D91] transition-colors shrink-0">
+                          {spec.icon === 'satellite' && <Satellite className="w-4 h-4 sm:w-5 sm:h-5" />}
+                          {spec.icon === 'cube' && <Box className="w-4 h-4 sm:w-5 sm:h-5" />}
+                          {spec.icon === 'atom' && <Code className="w-4 h-4 sm:w-5 sm:h-5" />}
+                          {spec.icon === 'dish' && <Radio className="w-4 h-4 sm:w-5 sm:h-5" />}
                         </div>
                         <div>
-                          <h4 className="text-xs font-bold text-white group-hover:text-cyan-200 transition-colors">
+                          <h4 className="text-[11px] sm:text-xs font-bold text-white group-hover:text-cyan-200 transition-colors">
                             {spec.title}
                           </h4>
-                          <p className="text-[11px] text-slate-400 mt-0.5">
+                          <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 leading-relaxed">
                             {spec.description}
                           </p>
                         </div>
@@ -546,36 +548,36 @@ export const AboutSpaceStationModal: React.FC<AboutSpaceStationModalProps> = ({
 
                 {/* 4. OFFICIAL NEXORIA ACCESS LINKS */}
                 <div className="space-y-2 pt-1">
-                  <div className="text-xs font-mono font-bold text-cyan-300 uppercase tracking-widest flex items-center gap-1.5">
-                    <Share2 className="w-3.5 h-3.5 text-cyan-400" />
+                  <div className="text-[11px] sm:text-xs font-mono font-bold text-cyan-300 uppercase tracking-widest flex items-center gap-1.5">
+                    <Share2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                     <span>OFFICIAL NEXORIA ACCESS LINKS</span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
                     {NEXORIA_CREW_DATA.officialLinks.map((link, idx) => (
                       <a
                         key={idx}
                         href={link.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="p-3 rounded-xl bg-[#07172e] border border-[#173763] hover:border-cyan-400 hover:bg-[#0c2447] transition-all flex items-center justify-between group cursor-pointer"
+                        className="p-2.5 sm:p-3 rounded-xl bg-[#07172e] border border-[#173763] hover:border-cyan-400 hover:bg-[#0c2447] transition-all flex items-center justify-between group cursor-pointer"
                       >
-                        <div className="flex items-center gap-2.5">
-                          <div className="p-2 rounded-lg bg-[#0b2142] text-cyan-300 group-hover:text-white transition-colors">
-                            {link.type === 'github' && <Terminal className="w-4 h-4" />}
-                            {link.type === 'key' && <Lock className="w-4 h-4" />}
-                            {link.type === 'dsn' && <Signal className="w-4 h-4" />}
+                        <div className="flex items-center gap-2 sm:gap-2.5">
+                          <div className="p-1.5 sm:p-2 rounded-lg bg-[#0b2142] text-cyan-300 group-hover:text-white transition-colors shrink-0">
+                            {link.type === 'github' && <Terminal className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                            {link.type === 'key' && <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                            {link.type === 'dsn' && <Signal className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
                           </div>
                           <div>
-                            <div className="text-xs font-bold text-white group-hover:text-cyan-200 transition-colors">
+                            <div className="text-[11px] sm:text-xs font-bold text-white group-hover:text-cyan-200 transition-colors">
                               {link.label}
                             </div>
-                            <div className="text-[10px] font-mono text-slate-400">
+                            <div className="text-[9px] sm:text-[10px] font-mono text-slate-400">
                               {link.subtitle}
                             </div>
                           </div>
                         </div>
-                        <ArrowUpRight className="w-4 h-4 text-slate-400 group-hover:text-cyan-300 transition-colors shrink-0" />
+                        <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 group-hover:text-cyan-300 transition-colors shrink-0" />
                       </a>
                     ))}
                   </div>

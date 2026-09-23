@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Float, OrbitControls, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
-import { Mic, MicOff, Volume2, VolumeX, Send, X, Bot, Sparkles, Radio, RotateCw, Square } from 'lucide-react';
+import { Mic, MicOff, Volume2, VolumeX, Send, X, Bot, Sparkles, Square } from 'lucide-react';
 import { getAssetUrl } from '../utils/assetPath';
 import { VoiceVisualizer } from './VoiceVisualizer';
 
@@ -233,17 +233,23 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [captionText, setCaptionText] = useState("ASTRA: Ready for telemetry queries...");
   const [speakingPulse, setSpeakingPulse] = useState(0);
   const [isVoiceVisualizerActive, setIsVoiceVisualizerActive] = useState(false);
-  const [viewMode, setViewMode] = useState<'portrait' | '3d'>('portrait');
+  const [viewMode] = useState<'portrait' | '3d'>('portrait');
   const [voiceEngine, setVoiceEngine] = useState<'openai' | 'system'>('openai');
   const [voicePersona, setVoicePersona] = useState<'alloy' | 'shimmer' | 'nova' | 'echo' | 'onyx'>('alloy');
+  const [isVoiceDropdownOpen, setIsVoiceDropdownOpen] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const recognitionRef = useRef<any>(null);
+
+  // Keep ref to isVoiceVisualizerActive for async callbacks
+  const isVoiceVisualizerActiveRef = useRef(isVoiceVisualizerActive);
+  useEffect(() => {
+    isVoiceVisualizerActiveRef.current = isVoiceVisualizerActive;
+  }, [isVoiceVisualizerActive]);
 
   // Auto-scroll chat messages
   useEffect(() => {
@@ -255,7 +261,6 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
     let currentIdx = 0;
     const captionInterval = setInterval(() => {
       if (currentIdx <= text.length) {
-        setCaptionText(`ASTRA: ${text.slice(0, currentIdx)}`);
         currentIdx += 3;
       } else {
         clearInterval(captionInterval);
@@ -272,8 +277,53 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
       .trim();
   };
 
-  // Stop speaking immediately (Interrupt AI)
-  const stopSpeaking = () => {
+  // Start Microphone Listening directly
+  const startListening = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch (e) { }
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+      recognitionRef.current = recognition;
+
+      recognition.onstart = () => {
+        setIsListening(true);
+        // setCaptionText("ASTRA: Listening to your voice command...");
+      };
+
+      recognition.onresult = (event: any) => {
+        const last = event.results.length - 1;
+        const transcript = event.results[last][0].transcript;
+        if (recognitionRef.current) {
+          try { recognitionRef.current.stop(); } catch (e) { }
+        }
+        setIsListening(false);
+        handleSend(transcript);
+      };
+
+      recognition.onerror = () => {
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognition.start();
+    } catch (e) {
+      setIsListening(false);
+    }
+  };
+
+  // Stop speaking immediately (Interrupt AI) & Auto-start microphone listening!
+  const stopSpeaking = (autoListen: boolean = true) => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
@@ -283,14 +333,22 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
     }
     setIsSpeaking(false);
     setSpeakingPulse(0);
-    setCaptionText("ASTRA: Speech interrupted. Tap Mic or type to command.");
+
+    if (autoListen) {
+      // setCaptionText("ASTRA: Interrupted! Listening to your voice...");
+      setTimeout(() => {
+        startListening();
+      }, 150);
+    } else {
+      // setCaptionText("ASTRA: Speech interrupted.");
+    }
   };
 
   // Fallback Web Speech Synthesis with best Natural/Neural voice filter
   const fallbackWebSpeech = (text: string) => {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
-    
+
     const spokenText = cleanSpeechText(text);
     if (!spokenText) return;
 
@@ -316,7 +374,7 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
 
     utterance.onstart = () => {
       if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch (e) {}
+        try { recognitionRef.current.stop(); } catch (e) { }
       }
       setIsListening(false);
       setIsSpeaking(true);
@@ -326,6 +384,9 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
     utterance.onend = () => {
       setIsSpeaking(false);
       setSpeakingPulse(0);
+      if (isVoiceVisualizerActiveRef.current) {
+        setTimeout(() => { startListening(); }, 200);
+      }
     };
 
     utterance.onerror = () => {
@@ -341,7 +402,7 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
   // Handle Speech Synthesis (OpenAI Real Human Voice HD vs System Neural Voice)
   const speakText = async (text: string) => {
     if (isMuted) {
-      setCaptionText(`ASTRA: ${text}`);
+      // setCaptionText(`ASTRA: ${text}`);
       return;
     }
 
@@ -364,7 +425,7 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
       try {
         setIsSpeaking(true);
         setSpeakingPulse(1);
-        setCaptionText("ASTRA: Synthesizing Gemini HD Human Voice...");
+        // setCaptionText("ASTRA: Synthesizing Gemini HD Human Voice...");
 
         const response = await fetch('https://api.openai.com/v1/audio/speech', {
           method: 'POST',
@@ -388,7 +449,7 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
 
           audio.onplay = () => {
             if (recognitionRef.current) {
-              try { recognitionRef.current.stop(); } catch (e) {}
+              try { recognitionRef.current.stop(); } catch (e) { }
             }
             setIsListening(false);
             setIsSpeaking(true);
@@ -399,6 +460,9 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
           audio.onended = () => {
             setIsSpeaking(false);
             setSpeakingPulse(0);
+            if (isVoiceVisualizerActiveRef.current) {
+              setTimeout(() => { startListening(); }, 200);
+            }
           };
 
           audio.onerror = () => {
@@ -428,14 +492,14 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
 
     // Stop microphone immediately when query is submitted
     if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch (e) {}
+      try { recognitionRef.current.stop(); } catch (e) { }
     }
     setIsListening(false);
 
     const newMessages = [...messages, { sender: 'user' as const, text: query }];
     setMessages(newMessages);
     if (!customText) setInput('');
-    setCaptionText("ASTRA: Querying Python AI Backend...");
+    // setCaptionText("ASTRA: Querying Python AI Backend...");
 
     let responseText = '';
 
@@ -523,165 +587,161 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
 
   // Toggle Microphone Input (Speech-to-Text)
   const toggleListening = () => {
-    // Tapping Mic while AI is speaking interrupts AI speech immediately
+    // Tapping Mic while AI is speaking interrupts AI speech immediately and starts listening
     if (isSpeaking) {
-      stopSpeaking();
-      return;
-    }
-
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert('Speech Recognition is not supported on this browser. Please use Chrome or Edge.');
+      stopSpeaking(true);
       return;
     }
 
     if (isListening) {
       if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch (e) {}
+        try { recognitionRef.current.stop(); } catch (e) { }
       }
       setIsListening(false);
       return;
     }
 
-    try {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false; // Stops automatically after single utterance
-      recognition.interimResults = false;
-      recognition.lang = 'en-US';
-      recognitionRef.current = recognition;
-
-      recognition.onstart = () => {
-        setIsListening(true);
-        setCaptionText("ASTRA: Listening to your voice command...");
-      };
-
-      recognition.onresult = (event: any) => {
-        const last = event.results.length - 1;
-        const transcript = event.results[last][0].transcript;
-        if (recognitionRef.current) {
-          try { recognitionRef.current.stop(); } catch (e) {}
-        }
-        setIsListening(false);
-        handleSend(transcript);
-      };
-
-      recognition.onerror = () => {
-        setIsListening(false);
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognition.start();
-    } catch (e) {
-      setIsListening(false);
-    }
+    startListening();
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-xl animate-in fade-in duration-200">
-      
+
       {/* Outer Holographic Container */}
       <div className="relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-2xl bg-gradient-to-b from-[#09152a] via-[#050e1d] to-[#020710] border-2 border-cyan-500/50 shadow-[0_0_60px_rgba(6,182,212,0.3)] overflow-hidden text-slate-100 font-sans">
-        
+
         {/* Top Glowing Cyan Accent Bar */}
         <div className="h-1 w-full bg-gradient-to-r from-cyan-500 via-sky-400 to-blue-600 shadow-[0_0_12px_#22d3ee]" />
 
         {/* 1. HEADER BAR */}
-        <div className="flex items-center justify-between px-6 py-3.5 border-b border-slate-800/80 bg-slate-950/60">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-950/80 border border-cyan-400 flex items-center justify-center text-cyan-300 shadow-[0_0_15px_rgba(56,189,248,0.4)]">
-              <Bot className="w-5 h-5 animate-pulse" />
+        <div className="flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3.5 border-b border-slate-800/80 bg-slate-950/60">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-cyan-950/80 border border-cyan-400 flex items-center justify-center text-cyan-300 shadow-[0_0_15px_rgba(56,189,248,0.4)] shrink-0">
+              <Bot className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-black tracking-wider text-white font-['Space_Grotesk']">
-                  NEXORIA ASTRA // 3D ASTRONAUT CO-PILOT
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <h3 className="text-xs sm:text-lg font-black tracking-wider text-white font-['Space_Grotesk'] truncate">
+                  NEXORIA ASTRA
                 </h3>
-                <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 uppercase">
-                  VOICE AI V9.4
-                </span>
+                {/* Mode Switcher Tabs */}
+                <div className="flex items-center gap-1 p-0.5 rounded-lg bg-slate-900 border border-slate-800 text-[10px] font-mono ml-1">
+                  <button
+                    onClick={() => {
+                      setIsVoiceVisualizerActive(false);
+                      if (isSpeaking) stopSpeaking(false);
+                    }}
+                    className={`px-2 py-0.5 rounded transition-all cursor-pointer font-bold ${!isVoiceVisualizerActive
+                        ? 'bg-cyan-500 text-slate-950 shadow-[0_0_10px_rgba(6,182,212,0.6)]'
+                        : 'text-slate-400 hover:text-white'
+                      }`}
+                  >
+                    💬 CHAT
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsVoiceVisualizerActive(true);
+                      if (!isListening) startListening();
+                    }}
+                    className={`px-2 py-0.5 rounded transition-all cursor-pointer font-bold ${isVoiceVisualizerActive
+                        ? 'bg-rose-600 text-white shadow-[0_0_10px_rgba(225,29,72,0.6)]'
+                        : 'text-slate-400 hover:text-white'
+                      }`}
+                  >
+                    🎙️ VOICE 3D
+                  </button>
+                </div>
               </div>
-              <p className="text-[11px] font-mono text-slate-400 flex items-center gap-2 mt-0.5">
+              <p className="text-[10px] font-mono text-slate-400 flex items-center gap-1.5 mt-0.5">
                 <span className={`w-2 h-2 rounded-full ${isSpeaking ? 'bg-cyan-400 animate-ping' : 'bg-emerald-400'}`} />
-                <span>STATUS: {isSpeaking ? 'TRANSMITTING VOICE' : 'STANDBY // READY'}</span>
-                <span className="text-slate-600">|</span>
-                <span className="text-cyan-300">AUDIO-REACTIVE SYNAPSE</span>
+                <span className="truncate">MODE: {isVoiceVisualizerActive ? '🎙️ VOICE ASSISTANT' : '💬 TEXT CHAT'}</span>
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Voice Engine & Persona Selector */}
-            <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[10px] font-mono">
-              <span className="text-slate-400 font-bold mr-1">HUMAN VOICE:</span>
+            {/* Voice Persona Settings Panel */}
+            <div className="hidden sm:block relative shrink-0">
               <button
-                onClick={() => { setVoiceEngine('openai'); setVoicePersona('alloy'); }}
-                className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
-                  voiceEngine === 'openai' && voicePersona === 'alloy'
-                    ? 'bg-cyan-500 text-slate-950 font-black shadow-[0_0_10px_rgba(6,182,212,0.6)]'
-                    : 'text-slate-300 hover:text-white'
-                }`}
-                title="Alloy: Gemini Natural Conversational Voice"
+                onClick={() => setIsVoiceDropdownOpen(v => !v)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-[10px] font-mono text-cyan-300 hover:border-cyan-500/60 transition-all cursor-pointer"
               >
-                ALLOY (GEMINI)
+                <Volume2 className="w-3 h-3 text-cyan-400" />
+                <span className="font-bold uppercase">{voicePersona}</span>
+                <span className="text-slate-500 text-[9px]">▾</span>
               </button>
-              <button
-                onClick={() => { setVoiceEngine('openai'); setVoicePersona('shimmer'); }}
-                className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
-                  voiceEngine === 'openai' && voicePersona === 'shimmer'
-                    ? 'bg-cyan-500 text-slate-950 font-black shadow-[0_0_10px_rgba(6,182,212,0.6)]'
-                    : 'text-slate-300 hover:text-white'
-                }`}
-                title="Shimmer: Expressive Female Conversational Voice"
-              >
-                SHIMMER (FEMALE)
-              </button>
-              <button
-                onClick={() => { setVoiceEngine('openai'); setVoicePersona('nova'); }}
-                className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
-                  voiceEngine === 'openai' && voicePersona === 'nova'
-                    ? 'bg-cyan-500 text-slate-950 font-black shadow-[0_0_10px_rgba(6,182,212,0.6)]'
-                    : 'text-slate-300 hover:text-white'
-                }`}
-                title="Nova: Friendly Female Voice"
-              >
-                NOVA
-              </button>
-              <button
-                onClick={() => { setVoiceEngine('openai'); setVoicePersona('echo'); }}
-                className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
-                  voiceEngine === 'openai' && voicePersona === 'echo'
-                    ? 'bg-cyan-500 text-slate-950 font-black shadow-[0_0_10px_rgba(6,182,212,0.6)]'
-                    : 'text-slate-300 hover:text-white'
-                }`}
-                title="Echo: Warm Male Voice"
-              >
-                ECHO
-              </button>
-              <button
-                onClick={() => { setVoiceEngine('openai'); setVoicePersona('onyx'); }}
-                className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
-                  voiceEngine === 'openai' && voicePersona === 'onyx'
-                    ? 'bg-cyan-500 text-slate-950 font-black shadow-[0_0_10px_rgba(6,182,212,0.6)]'
-                    : 'text-slate-300 hover:text-white'
-                }`}
-                title="Onyx: Deep Male Voice"
-              >
-                ONYX
-              </button>
+
+              {isVoiceDropdownOpen && (
+                <>
+                  {/* Backdrop - click outside to close */}
+                  <div className="fixed inset-0 z-[9998]" onClick={() => setIsVoiceDropdownOpen(false)} />
+
+                  {/* Settings Panel */}
+                  <div
+                    className="fixed w-56 rounded-xl border border-slate-700/80 shadow-[0_8px_40px_rgba(0,0,0,0.85)] z-[99999] overflow-hidden"
+                    style={{ top: '72px', right: '52px', background: 'rgba(10,18,35,0.97)' }}
+                  >
+                    {/* Header */}
+                    <div className="px-4 py-2.5 border-b border-slate-800">
+                      <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest">
+                        Voice Settings
+                      </span>
+                    </div>
+
+                    {/* Voice Options */}
+                    <div className="py-1">
+                      {([
+                        { id: 'alloy', label: 'Alloy', desc: 'Gemini Natural' },
+                        { id: 'shimmer', label: 'Shimmer', desc: 'Expressive Female' },
+                        { id: 'nova', label: 'Nova', desc: 'Friendly Female' },
+                        { id: 'echo', label: 'Echo', desc: 'Warm Male' },
+                        { id: 'onyx', label: 'Onyx', desc: 'Deep Male' },
+                      ] as const).map(v => {
+                        const isActive = voicePersona === v.id;
+                        return (
+                          <button
+                            key={v.id}
+                            onClick={() => {
+                              setVoiceEngine('openai');
+                              setVoicePersona(v.id);
+                              setIsVoiceDropdownOpen(false);
+                            }}
+                            className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-slate-800/60 transition-colors cursor-pointer group"
+                          >
+                            {/* Label */}
+                            <div className="text-left">
+                              <div className={`text-[12px] font-semibold ${isActive ? 'text-white' : 'text-slate-300 group-hover:text-white'}`}>
+                                {v.label}
+                              </div>
+                              <div className="text-[9.5px] text-slate-500">{v.desc}</div>
+                            </div>
+
+                            {/* ON/OFF Toggle Pill */}
+                            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold tracking-wide border transition-all ${isActive
+                                ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
+                                : 'bg-slate-800/60 border-slate-700 text-slate-500'
+                              }`}>
+                              <div className={`w-2 h-2 rounded-full transition-all ${isActive ? 'bg-emerald-400' : 'bg-slate-600'}`} />
+                              {isActive ? 'ON' : 'OFF'}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
+
 
             <button
               onClick={() => setIsMuted(!isMuted)}
-              className={`p-2 rounded-lg border transition-all cursor-pointer ${
-                isMuted
+              className={`p-2 rounded-lg border transition-all cursor-pointer ${isMuted
                   ? 'bg-rose-950/60 border-rose-500/50 text-rose-300'
                   : 'bg-slate-900 border-slate-700 text-cyan-300 hover:border-cyan-400'
-              }`}
+                }`}
               title={isMuted ? 'Unmute Voice' : 'Mute Voice'}
             >
               {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
@@ -699,13 +759,13 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
 
         {/* 2. BODY GRID (LEFT: 3D ASTRONAUT CANVAS, RIGHT: CHAT LOG) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 p-5 overflow-y-auto max-h-[calc(92vh-140px)] custom-scrollbar bg-[#030812]">
-          
+
           {/* LEFT COLUMN: 3D ASTRONAUT CANVAS DISPLAY */}
-          <div className="lg:col-span-5 flex flex-col justify-between rounded-xl bg-gradient-to-b from-[#08172e] via-[#040d1a] to-[#020610] border border-cyan-500/40 p-4 relative overflow-hidden shadow-inner space-y-4">
-            
+          <div className="lg:col-span-5 flex flex-col rounded-xl bg-gradient-to-b from-[#08172e] via-[#040d1a] to-[#020610] border border-cyan-500/40 p-4 relative overflow-hidden shadow-inner">
+
             {/* 3D / Holographic Astronaut Box */}
             <div className="relative w-full h-80 sm:h-96 rounded-lg overflow-hidden border border-cyan-500/40 bg-slate-950/90 flex items-center justify-center group">
-              
+
               {/* Sci-Fi Grid & Radial Ambient Glow */}
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(6,182,212,0.25)_0%,transparent_75%)] pointer-events-none" />
               <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(6,182,212,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(6,182,212,0.05)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
@@ -715,18 +775,16 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
                 <div className="relative w-full h-full flex items-center justify-center p-2">
                   {/* Floating Hologram Glow Behind Suit */}
                   <div
-                    className={`absolute w-48 h-64 rounded-full blur-2xl transition-all duration-300 ${
-                      isSpeaking ? 'bg-cyan-400/40 scale-110' : 'bg-sky-500/20'
-                    }`}
+                    className={`absolute w-48 h-64 rounded-full blur-2xl transition-all duration-300 ${isSpeaking ? 'bg-cyan-400/40 scale-110' : 'bg-sky-500/20'
+                      }`}
                   />
-                  
+
                   {/* Full Suit Astronaut Avatar Image */}
                   <img
                     src={getAssetUrl('/Voiceassistent/ChatGPT Image Sep 22, 2026, 02_26_01 PM.png')}
                     alt="NEXORIA AI World Astronaut Suit"
-                    className={`h-full max-h-[340px] object-contain relative z-10 transition-transform duration-700 hover:scale-105 ${
-                      isSpeaking ? 'drop-shadow-[0_0_25px_rgba(34,211,238,0.8)] animate-pulse' : 'drop-shadow-[0_0_15px_rgba(6,182,212,0.4)]'
-                    }`}
+                    className={`h-full max-h-[340px] object-contain relative z-10 transition-transform duration-700 hover:scale-105 ${isSpeaking ? 'drop-shadow-[0_0_25px_rgba(34,211,238,0.8)] animate-pulse' : 'drop-shadow-[0_0_15px_rgba(6,182,212,0.4)]'
+                      }`}
                   />
 
                   {/* Vertical HUD Scanning Laser Line */}
@@ -744,21 +802,6 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
                 </Canvas>
               )}
 
-              {/* Holographic HUD Header Badge & Mode Switcher */}
-              <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-auto z-30">
-                <div className="px-2.5 py-1 rounded text-[9px] font-mono font-bold bg-cyan-950/90 text-cyan-300 border border-cyan-500/50 shadow-md flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
-                  <span>{viewMode === 'portrait' ? 'NEXORIA SUIT // AVATAR' : '3D 360° INTERACTIVE ASTRONAUT'}</span>
-                </div>
-
-                <button
-                  onClick={() => setViewMode(v => v === 'portrait' ? '3d' : 'portrait')}
-                  className="px-2.5 py-1 rounded text-[9px] font-mono font-bold bg-slate-900/90 hover:bg-cyan-950 text-cyan-300 hover:text-white border border-cyan-500/40 transition-all shadow-md cursor-pointer flex items-center gap-1"
-                >
-                  <RotateCw className="w-3 h-3 text-cyan-400 animate-spin" />
-                  <span>{viewMode === 'portrait' ? '3D 360° MODEL' : 'SUIT AVATAR'}</span>
-                </button>
-              </div>
 
               {/* Speaking Audio Wave Visualizer Bars Overlay */}
               {isSpeaking && (
@@ -773,49 +816,13 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
                   ))}
                 </div>
               )}
-            </div>
+            </div>{/* end avatar box */}
 
-            {/* Quick Sci-Fi Prompts */}
-            <div className="space-y-2">
-              <div className="text-[10px] font-mono font-bold text-cyan-400 uppercase tracking-wider">
-                // QUICK TELEMETRY PROMPTS
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-                <button
-                  onClick={() => handleSend('Explain Gaganyaan Mission')}
-                  className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-cyan-950 text-slate-300 hover:text-cyan-300 border border-slate-800 hover:border-cyan-500/50 transition-all text-left truncate cursor-pointer"
-                >
-                  🚀 Gaganyaan Mission
-                </button>
-
-                <button
-                  onClick={() => handleSend('Show Solar System Orbits')}
-                  className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-cyan-950 text-slate-300 hover:text-cyan-300 border border-slate-800 hover:border-cyan-500/50 transition-all text-left truncate cursor-pointer"
-                >
-                  🪐 Solar System Orbits
-                </button>
-
-                <button
-                  onClick={() => handleSend('Latest AI Model Momentum')}
-                  className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-cyan-950 text-slate-300 hover:text-cyan-300 border border-slate-800 hover:border-cyan-500/50 transition-all text-left truncate cursor-pointer"
-                >
-                  🤖 Latest AI Models
-                </button>
-
-                <button
-                  onClick={() => handleSend('What is a Black Hole?')}
-                  className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-cyan-950 text-slate-300 hover:text-cyan-300 border border-slate-800 hover:border-cyan-500/50 transition-all text-left truncate cursor-pointer"
-                >
-                  🌌 What is Black Hole?
-                </button>
-              </div>
-            </div>
-
-          </div>
+          </div>{/* end left column */}
 
           {/* RIGHT COLUMN: CHAT MESSAGES LOG */}
           <div className="lg:col-span-7 flex flex-col justify-between rounded-xl bg-slate-950/60 border border-slate-800/90 p-4 space-y-4">
-            
+
             {/* Chat History or Voice Visualizer */}
             <div className="flex-1 relative space-y-3 overflow-y-auto max-h-72 p-2 custom-scrollbar">
               {isVoiceVisualizerActive ? (
@@ -823,7 +830,6 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
                   isListening={isListening || isSpeaking}
                   audioPulse={speakingPulse}
                   statusText={isSpeaking ? "Speaking..." : (isListening ? "Listening..." : "Standby...")}
-                  captionText={captionText}
                   onInterrupt={stopSpeaking}
                   onStopListening={() => {
                     setIsVoiceVisualizerActive(false);
@@ -839,11 +845,10 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
                       className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                     >
                       <div
-                        className={`max-w-[85%] p-3 rounded-xl text-xs leading-relaxed ${
-                          msg.sender === 'user'
+                        className={`max-w-[85%] p-3 rounded-xl text-xs leading-relaxed ${msg.sender === 'user'
                             ? 'bg-cyan-600 text-slate-950 font-medium rounded-tr-none'
                             : 'bg-slate-900/90 border border-slate-800 text-slate-200 rounded-tl-none font-mono'
-                        }`}
+                          }`}
                       >
                         {msg.sender === 'astra' && (
                           <div className="text-[10px] font-mono font-bold text-cyan-400 mb-1 flex items-center gap-1">
@@ -860,15 +865,15 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
               )}
             </div>
 
-            {/* Input Bar or Tap to Interrupt AI Button */}
+            {/* Input Bar or Voice Interrupt Button */}
             <div className="pt-2 border-t border-slate-800/80 flex items-center gap-2">
-              {isSpeaking ? (
+              {isVoiceVisualizerActive && isSpeaking ? (
                 <button
-                  onClick={stopSpeaking}
+                  onClick={() => stopSpeaking(true)}
                   className="flex-1 py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs tracking-wider flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(225,29,72,0.8)] border border-rose-400 animate-pulse transition-all cursor-pointer hover:scale-[1.01]"
                 >
                   <Square className="w-4 h-4 fill-white" />
-                  <span>🛑 TAP TO INTERRUPT AI VOICE</span>
+                  <span>🛑 TAP TO INTERRUPT & SPEAK NOW</span>
                 </button>
               ) : (
                 <>
@@ -876,39 +881,56 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
                     onClick={() => {
                       if (isVoiceVisualizerActive) {
                         setIsVoiceVisualizerActive(false);
+                        if (isSpeaking) stopSpeaking(false);
                         if (isListening) toggleListening();
                       } else {
                         setIsVoiceVisualizerActive(true);
                         if (!isListening) toggleListening();
                       }
                     }}
-                    className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
-                      isListening
+                    className={`p-2.5 rounded-xl border transition-all cursor-pointer ${isListening || isVoiceVisualizerActive
                         ? 'bg-rose-600 text-white animate-pulse border-rose-400'
                         : 'bg-slate-900 text-slate-300 border-slate-800 hover:text-cyan-300 hover:border-cyan-500/60'
-                    }`}
-                    title="Voice Assistant Mode"
+                      }`}
+                    title="Toggle 3D Voice Assistant Mode"
                   >
                     {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                   </button>
 
-                  <input
-                    type="text"
-                    placeholder="Ask ASTRA about space missions, orbits, AI..."
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                    className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/60 font-mono"
-                  />
+                  {/* In Chat Mode, if AI is speaking, show a small mute/stop icon */}
+                  {!isVoiceVisualizerActive && isSpeaking && (
+                    <button
+                      onClick={() => stopSpeaking(false)}
+                      className="p-2.5 rounded-xl bg-rose-950/80 border border-rose-500/50 text-rose-300 hover:bg-rose-900 transition-all cursor-pointer"
+                      title="Stop AI Voice Audio"
+                    >
+                      <Square className="w-3.5 h-3.5 fill-rose-300" />
+                    </button>
+                  )}
 
-                  <button
-                    onClick={() => handleSend()}
-                    disabled={!input.trim()}
-                    className="p-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-40 text-slate-950 font-bold transition-all cursor-pointer"
-                  >
-                    <Send className="w-4 h-4" />
-                  </button>
+                  {/* Chat mode only → show text input + send */}
+                  {!isVoiceVisualizerActive && (
+                    <>
+                      <input
+                        type="text"
+                        placeholder="Ask ASTRA about space missions, orbits, AI..."
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                        className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/60 font-mono"
+                      />
+                      <button
+                        onClick={() => handleSend()}
+                        disabled={!input.trim()}
+                        className="p-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-40 text-slate-950 font-bold transition-all cursor-pointer"
+                      >
+                        <Send className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
+
                 </>
+
               )}
             </div>
 
@@ -916,17 +938,8 @@ export const AIAstronautAssistant: React.FC<AIAstronautAssistantProps> = ({
 
         </div>
 
-        {/* 3. BOTTOM LIVE CAPTIONS & SUBTITLES BAR */}
-        <div className="px-6 py-2.5 border-t border-slate-800/80 bg-slate-950 flex items-center justify-between text-xs font-mono text-cyan-300">
-          <div className="flex items-center gap-2 flex-1 min-w-0 mr-4">
-            <Radio className="w-3.5 h-3.5 text-cyan-400 shrink-0 animate-pulse" />
-            <span className="text-[11px] truncate text-slate-200 font-semibold">{captionText}</span>
-          </div>
 
-          <div className="hidden sm:flex items-center gap-2 text-[10px] text-slate-400">
-            <span>PRESS [ESC] TO CLOSE</span>
-          </div>
-        </div>
+
 
       </div>
     </div>

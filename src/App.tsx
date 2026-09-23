@@ -5,6 +5,7 @@ import type { TechNodeOverlay } from './data/overlayData';
 import { Master3DUniverseCanvas } from './three/Master3DUniverseCanvas';
 import { AboutSpaceStationModal } from './components/AboutSpaceStationModal';
 import { AIAstronautAssistant } from './components/AIAstronautAssistant';
+import { TechNewsPanel } from './components/TechNewsPanel';
 import { getAssetUrl } from './utils/assetPath';
 
 export interface UniverseSettings {
@@ -66,6 +67,7 @@ export function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isNodePanelOpen, setIsNodePanelOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const [isTechNewsOpen, setIsTechNewsOpen] = useState(false);
 
   // Close the panel by default when a new node is selected
   useEffect(() => {
@@ -187,6 +189,8 @@ export function App() {
                 setActiveNav(item);
                 if (item === 'About') {
                   setIsAboutOpen(true);
+                } else if (item === 'Tech News') {
+                  setIsTechNewsOpen(true);
                 }
               }}
               className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all duration-200 cursor-pointer ${activeNav === item
@@ -601,6 +605,12 @@ export function App() {
       <AboutSpaceStationModal
         isOpen={isAboutOpen}
         onClose={() => setIsAboutOpen(false)}
+      />
+
+      {/* Real-Time Tech News Side Panel */}
+      <TechNewsPanel
+        isOpen={isTechNewsOpen}
+        onClose={() => { setIsTechNewsOpen(false); setActiveNav('Home'); }}
       />
 
       {/* 3D AI Cybernetic Astronaut Voice Assistant Modal (NEXORIA ASTRA) */}

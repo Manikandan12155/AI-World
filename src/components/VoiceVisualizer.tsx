@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import { X, Square } from 'lucide-react';
 
@@ -272,36 +272,12 @@ const VoiceSphereThree: React.FC<VoiceSphereThreeProps> = ({ state, speechRate =
   );
 };
 
-const TypewriterText = ({ text }: { text: string }) => {
-  const [displayed, setDisplayed] = useState("");
-  
-  useEffect(() => {
-    setDisplayed("");
-    let i = 0;
-    const interval = setInterval(() => {
-      setDisplayed(text.slice(0, i));
-      i++;
-      if (i > text.length) clearInterval(interval);
-    }, 25); // 25ms per character typing speed
-    
-    return () => clearInterval(interval);
-  }, [text]);
-
-  return (
-    <span>
-      {displayed}
-      <span className="animate-pulse text-cyan-400">|</span>
-    </span>
-  );
-};
-
 interface VoiceVisualizerProps {
   isListening: boolean;
   onStopListening: () => void;
   onInterrupt?: () => void;
   audioPulse: number; 
   statusText: string;
-  captionText?: string;
 }
 
 export const VoiceVisualizer: React.FC<VoiceVisualizerProps> = ({ 
@@ -309,8 +285,7 @@ export const VoiceVisualizer: React.FC<VoiceVisualizerProps> = ({
   onStopListening,
   onInterrupt,
   audioPulse,
-  statusText,
-  captionText
+  statusText
 }) => {
   // Determine state mapping for VoiceSphereThree
   const getSphereState = () => {
@@ -323,8 +298,26 @@ export const VoiceVisualizer: React.FC<VoiceVisualizerProps> = ({
   const isSpeaking = statusText === "Speaking...";
 
   return (
-    <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/40 backdrop-blur-sm overflow-hidden rounded-xl">
+
+    <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black border border-slate-800/60 shadow-[inset_0_0_80px_rgba(0,0,0,0.8)] overflow-hidden rounded-xl">
+      {/* Background Video */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover z-0"
+      >
+        <source src="/Voiceassistent/gemini_generated_video_58df3559.mp4" type="video/mp4" />
+      </video>
+      {/* Dark overlay to ensure the blue neon ball pops properly against the texture */}
+      <div className="absolute inset-0 bg-black/50 pointer-events-none" />
       
+      {/* Subtle Starry/Noise Overlay */}
+      <div className="absolute inset-0 opacity-[0.04] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay pointer-events-none" />
+
+
+
       {/* Close Button to return to Chat Mode */}
       <button 
         onClick={onStopListening}
@@ -368,16 +361,7 @@ export const VoiceVisualizer: React.FC<VoiceVisualizerProps> = ({
         )}
       </div>
 
-      {/* Caption overlay at the absolute bottom */}
-      {captionText && (
-        <div className="absolute bottom-0 left-0 w-full p-2 pointer-events-none z-20">
-          <div className="bg-slate-950/80 rounded-xl p-3 border border-slate-800/80 shadow-lg backdrop-blur-md">
-            <p className="text-slate-300 text-[11px] font-mono leading-relaxed line-clamp-3">
-              <TypewriterText text={captionText} />
-            </p>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 };

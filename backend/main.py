@@ -1,9 +1,12 @@
 import os
+import time
+import feedparser
 import requests
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
+from typing import List, Dict, Any
 
 # Load environment variables
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
@@ -91,6 +94,146 @@ def astra_chat(req: ChatRequest):
 
     return {"status": "success", "reply": reply_text}
 
+# ─────────────────────────────────────────────────────────
+# TECH NEWS ENDPOINT  (10-min cache, multi-source)
+# Sources: TechCrunch, The Verge, Wired, Ars Technica, Hacker News
+# ─────────────────────────────────────────────────────────
+
+_news_cache: Dict[str, Any] = {"data": [], "fetched_at": 0}
+CACHE_TTL = 600  # 10 minutes
+
+RSS_SOURCES = [
+    {
+        "name": "TechCrunch",
+        "url": "https://techcrunch.com/feed/",
+        "category": "Startup & VC",
+        "color": "#0FA0CE",
+    },
+    {
+        "name": "The Verge",
+        "url": "https://www.theverge.com/rss/index.xml",
+        "category": "Gadgets & Tech",
+        "color": "#FF4D4D",
+    },
+    {
+        "name": "Wired",
+        "url": "https://www.wired.com/feed/rss",
+        "category": "Science & Tech",
+        "color": "#FF8C00",
+    },
+    {
+        "name": "Ars Technica",
+        "url": "https://feeds.arstechnica.com/arstechnica/index",
+        "category": "Deep Dive",
+        "color": "#FF6600",
+    },
+    {
+        "name": "MIT Tech Review",
+        "url": "https://www.technologyreview.com/feed/",
+        "category": "AI & Research",
+        "color": "#A855F7",
+    },
+]
+
+def fetch_rss_articles(limit_per_source: int = 6) -> List[Dict]:
+    articles = []
+    for source in RSS_SOURCES:
+        try:
+            feed = feedparser.parse(source["url"])
+            for entry in feed.entries[:limit_per_source]:
+                # Extract image if available
+                image = None
+                if hasattr(entry, "media_content") and entry.media_content:
+                    image = entry.media_content[0].get("url")
+                elif hasattr(entry, "enclosures") and entry.enclosures:
+                    image = entry.enclosures[0].get("href")
+
+                # Published time
+                published = None
+                if hasattr(entry, "published"):
+                    published = entry.published
+                elif hasattr(entry, "updated"):
+                    published = entry.updated
+
+                articles.append({
+                    "id": entry.get("id", entry.get("link", "")),
+                    "title": entry.get("title", "No Title"),
+                    "url": entry.get("link", ""),
+                    "summary": entry.get("summary", "")[:200] if entry.get("summary") else "",
+                    "source": source["name"],
+                    "category": source["category"],
+                    "color": source["color"],
+                    "image": image,
+                    "published": published,
+                })
+        except Exception as e:
+            print(f"[TechNews] RSS error for {source['name']}: {e}")
+    return articles
+
+def fetch_hackernews_top(limit: int = 10) -> List[Dict]:
+    articles = []
+    try:
+        resp = requests.get(
+            "https://hacker-news.firebaseio.com/v0/topstories.json",
+            timeout=5
+        )
+        story_ids = resp.json()[:limit]
+        for sid in story_ids:
+            try:
+                story = requests.get(
+                    f"https://hacker-news.firebaseio.com/v0/item/{sid}.json",
+                    timeout=4
+                ).json()
+                if story and story.get("url") and story.get("type") == "story":
+                    articles.append({
+                        "id": str(sid),
+                        "title": story.get("title", ""),
+                        "url": story.get("url", ""),
+                        "summary": f"{story.get('score', 0)} points · {story.get('descendants', 0)} comments on HN",
+                        "source": "Hacker News",
+                        "category": "Community",
+                        "color": "#FF6600",
+                        "image": None,
+                        "published": None,
+                    })
+            except Exception:
+                continue
+    except Exception as e:
+        print(f"[TechNews] HackerNews error: {e}")
+    return articles
+
+@app.get("/api/tech-news")
+def get_tech_news(refresh: bool = False):
+    global _news_cache
+    now = time.time()
+
+    # Serve from cache if fresh (unless force refresh)
+    if not refresh and _news_cache["data"] and (now - _news_cache["fetched_at"]) < CACHE_TTL:
+        return {
+            "status": "ok",
+            "cached": True,
+            "fetched_at": _news_cache["fetched_at"],
+            "articles": _news_cache["data"],
+        }
+
+    # Fetch fresh data
+    rss_articles = fetch_rss_articles(limit_per_source=6)
+    hn_articles = fetch_hackernews_top(limit=10)
+
+    all_articles = rss_articles + hn_articles
+
+    # Sort by source order (RSS first, then HN)
+    _news_cache["data"] = all_articles
+    _news_cache["fetched_at"] = now
+
+    return {
+        "status": "ok",
+        "cached": False,
+        "fetched_at": now,
+        "articles": all_articles,
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="127.0.0.1", port=8555, reload=True)
+    uvicorn.run("main:app", host="127.0.0.1", port=8555, reload=False)
